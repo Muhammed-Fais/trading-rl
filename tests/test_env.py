@@ -39,3 +39,4 @@ def test_env_reset_and_step_contract() -> None:
     assert terminated is False
     assert truncated is False
     assert next_info["portfolio_value"] > 0
+    assert "reward" in next_info["reward_components"]

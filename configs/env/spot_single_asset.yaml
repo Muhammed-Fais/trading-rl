@@ -5,6 +5,14 @@ fee_rate: 0.001
 slippage_rate: 0.0005
 min_trade_notional: 10.0
 reward:
-  name: log_return
-  drawdown_penalty: 0.05
-  turnover_penalty: 0.001
+  name: real_market
+  return_weight: 1.0
+  benchmark_weight: 0.25
+  drawdown_penalty: 0.2
+  downside_penalty: 0.1
+  volatility_penalty: 0.02
+  turnover_penalty: 0.002
+  exposure_penalty: 0.001
+  max_position_fraction: 1.0
+  reward_clip: 0.05
+  rolling_window: 32
