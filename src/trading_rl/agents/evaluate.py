@@ -49,11 +49,11 @@ def evaluate_policy(
 def named_policy(name: str, seed: int = 7) -> PolicyFn:
     rng = np.random.default_rng(seed)
     if name == "cash":
-        return lambda _obs, _info: 2
+        return lambda _obs, _info: 1
     if name == "buy_and_hold":
-        return lambda _obs, info: 1 if float(info["position_fraction"]) < 0.99 else 0
+        return lambda _obs, info: int(info.get("action_count", 5)) - 1
     if name == "random":
-        return lambda _obs, _info: int(rng.integers(0, 3))
+        return lambda _obs, info: int(rng.integers(0, int(info.get("action_count", 5))))
     raise ValueError(f"Unknown policy: {name}")
 
 
@@ -70,7 +70,7 @@ def rllib_policy(algo: Any) -> PolicyFn:
 
 
 def build_env_from_config(env_config: dict[str, Any]) -> SpotTradingEnv:
-    data_path = env_config.pop("data_path")
+    data_path = str(Path(env_config.pop("data_path")).expanduser().resolve())
     df = pd.read_parquet(data_path)
     return SpotTradingEnv(df, SpotTradingConfig(**env_config))
 

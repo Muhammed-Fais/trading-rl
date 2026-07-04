@@ -64,6 +64,10 @@ an HTML trading report artifact with:
 - exposure and actions
 - reward component traces
 
+The default PPO config now trains on the chronological training split with
+randomized episode starts and evaluates on the held-out test split. Reports also
+log cash, buy-and-hold, and random baselines for comparison.
+
 You can also generate a baseline report without training:
 
 ```bash

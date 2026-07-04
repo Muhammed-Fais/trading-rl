@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 
-from trading_rl.agents.evaluate import evaluate_and_report, rllib_policy
+from trading_rl.agents.evaluate import evaluate_and_report, named_policy, rllib_policy
 from trading_rl.envs.spot_trading_env import SpotTradingConfig, SpotTradingEnv
 from trading_rl.utils.config import load_yaml
 
@@ -89,11 +89,14 @@ def main() -> None:
 
         report_cfg = cfg.get("report", {})
         if report_cfg.get("enabled", True):
+            eval_env_config = dict(env_config)
+            eval_env_config["split"] = report_cfg.get("split", "test")
+            eval_env_config["random_start"] = False
             report_path = Path(
                 report_cfg.get("output", f"artifacts/reports/{experiment_name}.html")
             )
             _, eval_metrics, html_path = evaluate_and_report(
-                env_config,
+                eval_env_config,
                 rllib_policy(algo),
                 report_path,
                 title=f"{experiment_name} evaluation",
@@ -104,6 +107,22 @@ def main() -> None:
             mlflow.log_metrics({f"eval_{k}": v for k, v in eval_metrics.as_dict().items()})
             mlflow.log_artifact(str(html_path), artifact_path="reports")
             print({"report": str(html_path), **eval_metrics.as_dict()})
+
+            for baseline in report_cfg.get("baselines", ["cash", "buy_and_hold"]):
+                baseline_path = report_path.with_name(f"{report_path.stem}_{baseline}.html")
+                _, baseline_metrics, baseline_html = evaluate_and_report(
+                    eval_env_config,
+                    named_policy(baseline, seed=int(report_cfg.get("seed", 7))),
+                    baseline_path,
+                    title=f"{baseline} baseline",
+                    start_index=report_cfg.get("start_index"),
+                    max_steps=report_cfg.get("max_steps"),
+                    seed=int(report_cfg.get("seed", 7)),
+                )
+                mlflow.log_metrics(
+                    {f"baseline_{baseline}_{k}": v for k, v in baseline_metrics.as_dict().items()}
+                )
+                mlflow.log_artifact(str(baseline_html), artifact_path="reports")
 
         if final_checkpoint is not None:
             mlflow.set_tag("final_checkpoint", str(final_checkpoint))

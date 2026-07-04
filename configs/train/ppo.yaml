@@ -1,4 +1,4 @@
-experiment_name: btcusdt_ppo_smoke
+experiment_name: btcusdt_ppo_v3
 tracking:
   uri: sqlite:///mlflow.db
   experiment: trading-rl
@@ -6,28 +6,37 @@ env_config:
   data_path: data/features/binance/BTCUSDT_1h_features.parquet
   initial_cash: 10000.0
   lookback: 64
-  episode_length: 2048
+  episode_length: 720
+  split: train
+  train_fraction: 0.7
+  validation_fraction: 0.15
+  random_start: true
   fee_rate: 0.001
   slippage_rate: 0.0005
   min_trade_notional: 10.0
+  target_position_fractions: [0.0, 0.25, 0.5, 0.75, 1.0]
+  normalize_observations: true
+  observation_clip: 10.0
   reward:
     return_weight: 1.0
     benchmark_weight: 0.25
     drawdown_penalty: 0.2
     downside_penalty: 0.1
     volatility_penalty: 0.02
-    turnover_penalty: 0.002
+    turnover_penalty: 0.01
     exposure_penalty: 0.001
     max_position_fraction: 1.0
     reward_clip: 0.05
     rolling_window: 32
 training:
-  stop_iterations: 5
-  checkpoint_frequency: 5
+  stop_iterations: 20
+  checkpoint_frequency: 10
   num_env_runners: 1
-  train_batch_size: 4096
+  train_batch_size: 8192
   lr: 0.0001
 report:
   enabled: true
-  output: artifacts/reports/btcusdt_ppo_smoke.html
+  output: artifacts/reports/btcusdt_ppo_v3.html
+  split: test
+  baselines: [cash, buy_and_hold, random]
   seed: 7

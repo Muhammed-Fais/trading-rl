@@ -39,3 +39,24 @@ def test_env_reset_and_step_contract() -> None:
     assert truncated is False
     assert next_info["portfolio_value"] > 0
     assert "reward" in next_info["reward_components"]
+
+
+def test_env_uses_chronological_split_and_random_start() -> None:
+    df = _sample_df(1000)
+    env = SpotTradingEnv(
+        df,
+        SpotTradingConfig(
+            lookback=16,
+            episode_length=24,
+            split="test",
+            random_start=True,
+            min_trade_notional=0.0,
+        ),
+    )
+
+    assert len(env.df) == 150
+
+    _, first_info = env.reset(seed=1)
+    _, second_info = env.reset(seed=2)
+    assert first_info["step"] != second_info["step"]
+    assert first_info["action_count"] == 6

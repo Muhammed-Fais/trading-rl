@@ -9,6 +9,7 @@ import pandas as pd
 from gymnasium import spaces
 
 from trading_rl.data.features import feature_columns
+from trading_rl.data.splits import chronological_split_indices
 from trading_rl.envs.accounting import mark_to_market, rebalance_to_fraction
 from trading_rl.envs.rewards import RealMarketReward, RewardConfig, RewardInput
 
@@ -18,15 +19,27 @@ class SpotTradingConfig:
     initial_cash: float = 10_000.0
     lookback: int = 64
     episode_length: int | None = 2048
+    split: str = "train"
+    train_fraction: float = 0.7
+    validation_fraction: float = 0.15
+    random_start: bool = True
     fee_rate: float = 0.001
     slippage_rate: float = 0.0005
     min_trade_notional: float = 10.0
+    target_position_fractions: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
+    normalize_observations: bool = True
+    observation_clip: float = 10.0
     reward: RewardConfig = field(default_factory=RewardConfig)
 
     def __post_init__(self) -> None:
         if isinstance(self.reward, dict):
             reward_config = {key: value for key, value in self.reward.items() if key != "name"}
             object.__setattr__(self, "reward", RewardConfig(**reward_config))
+        object.__setattr__(
+            self,
+            "target_position_fractions",
+            tuple(float(value) for value in self.target_position_fractions),
+        )
 
 
 class SpotTradingEnv(gym.Env):
@@ -37,7 +50,7 @@ class SpotTradingEnv(gym.Env):
     def __init__(self, df: pd.DataFrame, config: SpotTradingConfig | None = None):
         super().__init__()
         self.config = config or SpotTradingConfig()
-        self.df = df.reset_index(drop=True)
+        self.df = _select_split(df.reset_index(drop=True), self.config)
         if len(self.df) <= self.config.lookback + 2:
             raise ValueError("Dataframe is too short for configured lookback")
         if "close" not in self.df.columns:
@@ -48,9 +61,10 @@ class SpotTradingEnv(gym.Env):
             raise ValueError("Dataframe must include at least one numeric feature column")
 
         self.prices = self.df["close"].astype(float).to_numpy()
-        self.features = self.df[self.feature_cols].astype(np.float32).to_numpy()
+        raw_features = self.df[self.feature_cols].astype(np.float32).to_numpy()
+        self.features = self._normalize_features(raw_features)
         self.reward_fn = RealMarketReward(self.config.reward)
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Discrete(len(self.config.target_position_fractions) + 1)
         self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -77,9 +91,11 @@ class SpotTradingEnv(gym.Env):
 
         previous_value = self.portfolio_value
         previous_price = float(self.prices[self.current_step])
-        target_fraction = float(
-            np.clip({0: self.position_fraction, 1: 1.0, 2: 0.0}[int(action)], 0.0, 1.0)
-        )
+        if int(action) == 0:
+            target_fraction = self.position_fraction
+        else:
+            target_fraction = self.config.target_position_fractions[int(action) - 1]
+        target_fraction = float(np.clip(target_fraction, 0.0, 1.0))
         state = rebalance_to_fraction(
             cash=self.cash,
             asset_quantity=self.asset_quantity,
@@ -150,7 +166,10 @@ class SpotTradingEnv(gym.Env):
             max_start = max(self.config.lookback, len(self.df) - self.config.episode_length - 1)
         start = options.get("start_index")
         if start is None:
-            start = self.config.lookback
+            if self.config.random_start and max_start > self.config.lookback:
+                start = self._rng.integers(self.config.lookback, max_start + 1)
+            else:
+                start = self.config.lookback
         self.current_step = int(np.clip(start, self.config.lookback, max_start))
         self.steps_elapsed = 0
         self.cash = float(self.config.initial_cash)
@@ -176,6 +195,16 @@ class SpotTradingEnv(gym.Env):
         )
         return np.concatenate([market.astype(np.float32), portfolio]).astype(np.float32)
 
+    def _normalize_features(self, features: np.ndarray) -> np.ndarray:
+        if not self.config.normalize_observations:
+            return features
+        mean = np.nanmean(features, axis=0)
+        std = np.nanstd(features, axis=0)
+        std = np.where(std < 1e-8, 1.0, std)
+        normalized = (features - mean) / std
+        clipped = np.clip(normalized, -self.config.observation_clip, self.config.observation_clip)
+        return clipped.astype(np.float32)
+
     def _info(
         self,
         turnover: float = 0.0,
@@ -190,5 +219,26 @@ class SpotTradingEnv(gym.Env):
             "position_fraction": self.position_fraction,
             "drawdown": drawdown,
             "turnover": turnover,
+            "action_count": self.action_space.n,
             "reward_components": reward_components or self.last_reward_components,
         }
+
+
+def _select_split(df: pd.DataFrame, config: SpotTradingConfig) -> pd.DataFrame:
+    split = config.split.lower()
+    if split == "all":
+        return df
+    splits = chronological_split_indices(
+        len(df),
+        train_fraction=config.train_fraction,
+        validation_fraction=config.validation_fraction,
+    )
+    if split == "train":
+        selected = df.iloc[splits.train]
+    elif split in {"validation", "val"}:
+        selected = df.iloc[splits.validation]
+    elif split == "test":
+        selected = df.iloc[splits.test]
+    else:
+        raise ValueError("split must be one of: train, validation, test, all")
+    return selected.reset_index(drop=True)
