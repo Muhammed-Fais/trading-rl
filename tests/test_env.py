@@ -1,4 +1,6 @@
+import numpy as np
 import pandas as pd
+import pytest
 
 from trading_rl.data.features import add_basic_features
 from trading_rl.envs.spot_trading_env import SpotTradingConfig, SpotTradingEnv
@@ -60,3 +62,25 @@ def test_env_uses_chronological_split_and_random_start() -> None:
     _, second_info = env.reset(seed=2)
     assert first_info["step"] != second_info["step"]
     assert first_info["action_count"] == 6
+
+
+def test_env_supports_continuous_action_with_no_trade_band() -> None:
+    env = SpotTradingEnv(
+        _sample_df(),
+        SpotTradingConfig(
+            lookback=16,
+            episode_length=10,
+            action_mode="continuous",
+            no_trade_band=0.1,
+            min_trade_notional=0.0,
+            random_start=False,
+        ),
+    )
+
+    obs, _ = env.reset(seed=7)
+    assert obs.shape == env.observation_space.shape
+    _, _, _, _, info = env.step(env.action_space.sample())
+    current_position = float(info["position_fraction"])
+
+    _, _, _, _, next_info = env.step(np.array([current_position + 0.01], dtype=np.float32))
+    assert next_info["turnover"] == pytest.approx(0.0)

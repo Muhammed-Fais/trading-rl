@@ -68,6 +68,19 @@ The default PPO config now trains on the chronological training split with
 randomized episode starts and evaluates on the held-out test split. Reports also
 log cash, buy-and-hold, and random baselines for comparison.
 
+The environment also supports continuous target-allocation actions with a
+no-trade band, which is closer to real portfolio management than repeatedly
+choosing coarse buy/sell buckets.
+
+Run baseline walk-forward validation:
+
+```bash
+uv run trading-rl-walk-forward \
+  --config configs/train/ppo.yaml \
+  --policies cash buy_and_hold trend vol_target mean_reversion \
+  --output-dir artifacts/walk_forward/btcusdt
+```
+
 You can also generate a baseline report without training:
 
 ```bash

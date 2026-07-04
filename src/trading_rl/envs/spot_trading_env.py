@@ -26,6 +26,8 @@ class SpotTradingConfig:
     fee_rate: float = 0.001
     slippage_rate: float = 0.0005
     min_trade_notional: float = 10.0
+    action_mode: str = "discrete"
+    no_trade_band: float = 0.02
     target_position_fractions: tuple[float, ...] = (0.0, 0.25, 0.5, 0.75, 1.0)
     normalize_observations: bool = True
     observation_clip: float = 10.0
@@ -43,7 +45,7 @@ class SpotTradingConfig:
 
 
 class SpotTradingEnv(gym.Env):
-    """Single-asset spot trading environment with discrete target allocations."""
+    """Single-asset spot trading environment with target allocation actions."""
 
     metadata = {"render_modes": ["human"]}
 
@@ -64,7 +66,12 @@ class SpotTradingEnv(gym.Env):
         raw_features = self.df[self.feature_cols].astype(np.float32).to_numpy()
         self.features = self._normalize_features(raw_features)
         self.reward_fn = RealMarketReward(self.config.reward)
-        self.action_space = spaces.Discrete(len(self.config.target_position_fractions) + 1)
+        if self.config.action_mode == "continuous":
+            self.action_space = spaces.Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32)
+        elif self.config.action_mode == "discrete":
+            self.action_space = spaces.Discrete(len(self.config.target_position_fractions) + 1)
+        else:
+            raise ValueError("action_mode must be one of: discrete, continuous")
         self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
@@ -91,10 +98,9 @@ class SpotTradingEnv(gym.Env):
 
         previous_value = self.portfolio_value
         previous_price = float(self.prices[self.current_step])
-        if int(action) == 0:
+        target_fraction = self._target_fraction(action)
+        if abs(target_fraction - self.position_fraction) < self.config.no_trade_band:
             target_fraction = self.position_fraction
-        else:
-            target_fraction = self.config.target_position_fractions[int(action) - 1]
         target_fraction = float(np.clip(target_fraction, 0.0, 1.0))
         state = rebalance_to_fraction(
             cash=self.cash,
@@ -153,7 +159,12 @@ class SpotTradingEnv(gym.Env):
             reward,
             terminated,
             truncated,
-            self._info(state.turnover, reward_result.components),
+            self._info(
+                turnover=state.turnover,
+                reward_components=reward_result.components,
+                action=action,
+                target_fraction=target_fraction,
+            ),
         )
 
     def render(self) -> None:
@@ -205,21 +216,35 @@ class SpotTradingEnv(gym.Env):
         clipped = np.clip(normalized, -self.config.observation_clip, self.config.observation_clip)
         return clipped.astype(np.float32)
 
+    def _target_fraction(self, action: int | np.ndarray) -> float:
+        if self.config.action_mode == "continuous":
+            return float(np.clip(np.asarray(action, dtype=np.float32).reshape(-1)[0], 0.0, 1.0))
+        if int(action) == 0:
+            return self.position_fraction
+        return float(np.clip(self.config.target_position_fractions[int(action) - 1], 0.0, 1.0))
+
     def _info(
         self,
         turnover: float = 0.0,
         reward_components: dict[str, float] | None = None,
+        action: Any | None = None,
+        target_fraction: float | None = None,
     ) -> dict[str, Any]:
         drawdown = 0.0 if self.peak_value <= 0 else 1.0 - self.portfolio_value / self.peak_value
+        price = float(self.prices[self.current_step])
         return {
             "step": self.current_step,
+            "price": price,
             "cash": self.cash,
             "asset_quantity": self.asset_quantity,
             "portfolio_value": self.portfolio_value,
             "position_fraction": self.position_fraction,
             "drawdown": drawdown,
             "turnover": turnover,
-            "action_count": self.action_space.n,
+            "action_mode": self.config.action_mode,
+            "action_count": getattr(self.action_space, "n", None),
+            "action": _jsonable_action(action),
+            "target_fraction": target_fraction,
             "reward_components": reward_components or self.last_reward_components,
         }
 
@@ -242,3 +267,12 @@ def _select_split(df: pd.DataFrame, config: SpotTradingConfig) -> pd.DataFrame:
     else:
         raise ValueError("split must be one of: train, validation, test, all")
     return selected.reset_index(drop=True)
+
+
+def _jsonable_action(action: Any | None) -> int | float | None:
+    if action is None:
+        return None
+    array = np.asarray(action)
+    if array.shape == ():
+        return int(array.item()) if float(array.item()).is_integer() else float(array.item())
+    return float(array.reshape(-1)[0])

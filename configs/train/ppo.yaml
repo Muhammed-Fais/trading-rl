@@ -1,4 +1,4 @@
-experiment_name: btcusdt_ppo_v3
+experiment_name: btcusdt_ppo_continuous_v1
 tracking:
   uri: sqlite:///mlflow.db
   experiment: trading-rl
@@ -14,6 +14,8 @@ env_config:
   fee_rate: 0.001
   slippage_rate: 0.0005
   min_trade_notional: 10.0
+  action_mode: continuous
+  no_trade_band: 0.05
   target_position_fractions: [0.0, 0.25, 0.5, 0.75, 1.0]
   normalize_observations: true
   observation_clip: 10.0
@@ -23,7 +25,7 @@ env_config:
     drawdown_penalty: 0.2
     downside_penalty: 0.1
     volatility_penalty: 0.02
-    turnover_penalty: 0.01
+    turnover_penalty: 0.02
     exposure_penalty: 0.001
     max_position_fraction: 1.0
     reward_clip: 0.05
@@ -36,7 +38,7 @@ training:
   lr: 0.0001
 report:
   enabled: true
-  output: artifacts/reports/btcusdt_ppo_v3.html
+  output: artifacts/reports/btcusdt_ppo_continuous_v1.html
   split: test
-  baselines: [cash, buy_and_hold, random]
+  baselines: [cash, buy_and_hold, random, trend, vol_target, mean_reversion]
   seed: 7

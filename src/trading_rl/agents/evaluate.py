@@ -13,7 +13,8 @@ from trading_rl.backtest.report import write_html_report
 from trading_rl.envs.spot_trading_env import SpotTradingConfig, SpotTradingEnv
 from trading_rl.utils.config import load_yaml
 
-PolicyFn = Callable[[np.ndarray, dict[str, Any]], int]
+PolicyAction = int | np.ndarray
+PolicyFn = Callable[[np.ndarray, dict[str, Any]], PolicyAction]
 
 
 def evaluate_policy(
@@ -33,7 +34,7 @@ def evaluate_policy(
     done = False
     steps = 0
     while not done:
-        action = int(policy_fn(obs, info))
+        action = policy_fn(obs, info)
         obs, reward, terminated, truncated, info = env.step(action)
         row = _history_row(env, info, start_price, initial_value, action=action)
         row["reward"] = reward
@@ -49,21 +50,27 @@ def evaluate_policy(
 def named_policy(name: str, seed: int = 7) -> PolicyFn:
     rng = np.random.default_rng(seed)
     if name == "cash":
-        return lambda _obs, _info: 1
+        return lambda _obs, info: _target_action(info, 0.0)
     if name == "buy_and_hold":
-        return lambda _obs, info: int(info.get("action_count", 5)) - 1
+        return lambda _obs, info: _target_action(info, 1.0)
     if name == "random":
-        return lambda _obs, info: int(rng.integers(0, int(info.get("action_count", 5))))
+        return lambda _obs, info: _target_action(info, float(rng.random()))
+    if name == "trend":
+        return _trend_policy()
+    if name == "vol_target":
+        return _vol_target_policy()
+    if name == "mean_reversion":
+        return _mean_reversion_policy()
     raise ValueError(f"Unknown policy: {name}")
 
 
 def rllib_policy(algo: Any) -> PolicyFn:
-    def _policy(obs: np.ndarray, _info: dict[str, Any]) -> int:
+    def _policy(obs: np.ndarray, _info: dict[str, Any]) -> PolicyAction:
         if hasattr(algo, "compute_single_action"):
-            return int(algo.compute_single_action(obs))
+            return algo.compute_single_action(obs)
         if hasattr(algo, "get_policy"):
             action, _, _ = algo.get_policy().compute_single_action(obs)
-            return int(action)
+            return action
         raise TypeError("Unsupported RLlib algorithm object")
 
     return _policy
@@ -102,7 +109,7 @@ def _history_row(
     info: dict[str, Any],
     start_price: float,
     initial_value: float,
-    action: int,
+    action: PolicyAction,
 ) -> dict[str, Any]:
     timestamp = None
     if "open_time" in env.df.columns:
@@ -120,7 +127,8 @@ def _history_row(
         "position_fraction": float(info["position_fraction"]),
         "drawdown": float(info["drawdown"]),
         "turnover": float(info["turnover"]),
-        "action": int(action),
+        "action": _action_value(action),
+        "target_fraction": info.get("target_fraction"),
     }
 
 
@@ -131,7 +139,7 @@ def main() -> None:
     parser.add_argument("--config", default="configs/train/ppo.yaml")
     parser.add_argument(
         "--policy",
-        choices=["cash", "buy_and_hold", "random"],
+        choices=["cash", "buy_and_hold", "random", "trend", "vol_target", "mean_reversion"],
         default="buy_and_hold",
     )
     parser.add_argument("--output", default="artifacts/reports/evaluation.html")
@@ -151,6 +159,85 @@ def main() -> None:
         seed=args.seed,
     )
     print({"report": str(report_path), **metrics.as_dict()})
+
+
+def _target_action(info: dict[str, Any], target_fraction: float) -> PolicyAction:
+    target = float(np.clip(target_fraction, 0.0, 1.0))
+    if info.get("action_mode") == "continuous":
+        return np.array([target], dtype=np.float32)
+    action_count = int(info.get("action_count", 6))
+    if target == 0.0:
+        return 1
+    if target == 1.0:
+        return action_count - 1
+    fractions = np.linspace(0.0, 1.0, action_count - 1)
+    return int(np.argmin(np.abs(fractions - target))) + 1
+
+
+def _trend_policy(short_window: int = 24, long_window: int = 168) -> PolicyFn:
+    prices: list[float] = []
+
+    def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
+        prices.append(float(info["price"]))
+        if len(prices) < long_window:
+            return _target_action(info, 0.0)
+        short_ma = float(np.mean(prices[-short_window:]))
+        long_ma = float(np.mean(prices[-long_window:]))
+        return _target_action(info, 1.0 if short_ma > long_ma else 0.0)
+
+    return _policy
+
+
+def _vol_target_policy(
+    trend_window: int = 168,
+    realized_window: int = 72,
+    target_hourly_vol: float = 0.01,
+) -> PolicyFn:
+    prices: list[float] = []
+
+    def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
+        prices.append(float(info["price"]))
+        if len(prices) < max(trend_window, realized_window) + 1:
+            return _target_action(info, 0.0)
+        log_returns = np.diff(np.log(np.asarray(prices[-realized_window:])))
+        realized_vol = float(np.std(log_returns, ddof=1))
+        trend_on = prices[-1] > float(np.mean(prices[-trend_window:]))
+        if not trend_on or realized_vol <= 0:
+            return _target_action(info, 0.0)
+        exposure = min(target_hourly_vol / realized_vol, 1.0)
+        return _target_action(info, exposure)
+
+    return _policy
+
+
+def _mean_reversion_policy(
+    window: int = 48,
+    entry_z: float = -1.0,
+    exit_z: float = 0.25,
+) -> PolicyFn:
+    prices: list[float] = []
+    invested = False
+
+    def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
+        nonlocal invested
+        prices.append(float(info["price"]))
+        if len(prices) < window:
+            return _target_action(info, 0.0)
+        recent = np.asarray(prices[-window:], dtype=float)
+        std = float(np.std(recent, ddof=1))
+        zscore = 0.0 if std == 0.0 else float((recent[-1] - np.mean(recent)) / std)
+        if zscore < entry_z:
+            invested = True
+        elif zscore > exit_z:
+            invested = False
+        return _target_action(info, 1.0 if invested else 0.0)
+
+    return _policy
+
+
+def _action_value(action: PolicyAction) -> float:
+    array = np.asarray(action)
+    return float(array.reshape(-1)[0])
 
 
 if __name__ == "__main__":
