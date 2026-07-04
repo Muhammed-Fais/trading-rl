@@ -51,16 +51,11 @@ class SpotTradingEnv(gym.Env):
         self.features = self.df[self.feature_cols].astype(np.float32).to_numpy()
         self.reward_fn = RealMarketReward(self.config.reward)
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Dict(
-            {
-                "market": spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(self.config.lookback, len(self.feature_cols)),
-                    dtype=np.float32,
-                ),
-                "portfolio": spaces.Box(low=0.0, high=np.inf, shape=(4,), dtype=np.float32),
-            }
+        self.observation_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(self.config.lookback * len(self.feature_cols) + 4,),
+            dtype=np.float32,
         )
         self._rng = np.random.default_rng()
         self._reset_state()
@@ -70,7 +65,7 @@ class SpotTradingEnv(gym.Env):
         *,
         seed: int | None = None,
         options: dict[str, Any] | None = None,
-    ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
         self._rng = np.random.default_rng(seed)
         self._reset_state(options or {})
@@ -82,7 +77,9 @@ class SpotTradingEnv(gym.Env):
 
         previous_value = self.portfolio_value
         previous_price = float(self.prices[self.current_step])
-        target_fraction = {0: self.position_fraction, 1: 1.0, 2: 0.0}[int(action)]
+        target_fraction = float(
+            np.clip({0: self.position_fraction, 1: 1.0, 2: 0.0}[int(action)], 0.0, 1.0)
+        )
         state = rebalance_to_fraction(
             cash=self.cash,
             asset_quantity=self.asset_quantity,
@@ -164,9 +161,9 @@ class SpotTradingEnv(gym.Env):
         self.recent_portfolio_returns: list[float] = []
         self.last_reward_components: dict[str, float] = {}
 
-    def _observation(self) -> dict[str, np.ndarray]:
+    def _observation(self) -> np.ndarray:
         start = self.current_step - self.config.lookback
-        market = self.features[start : self.current_step]
+        market = self.features[start : self.current_step].reshape(-1)
         price = float(self.prices[self.current_step])
         portfolio = np.array(
             [
@@ -177,7 +174,7 @@ class SpotTradingEnv(gym.Env):
             ],
             dtype=np.float32,
         )
-        return {"market": market.astype(np.float32), "portfolio": portfolio}
+        return np.concatenate([market.astype(np.float32), portfolio]).astype(np.float32)
 
     def _info(
         self,

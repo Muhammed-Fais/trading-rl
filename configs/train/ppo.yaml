@@ -1,6 +1,6 @@
 experiment_name: btcusdt_ppo_smoke
 tracking:
-  uri: mlruns
+  uri: sqlite:///mlflow.db
   experiment: trading-rl
 env_config:
   data_path: data/features/binance/BTCUSDT_1h_features.parquet
@@ -22,7 +22,7 @@ env_config:
     reward_clip: 0.05
     rolling_window: 32
 training:
-  stop_iterations: 10
+  stop_iterations: 5
   checkpoint_frequency: 5
   num_env_runners: 1
   train_batch_size: 4096

@@ -13,7 +13,7 @@ from trading_rl.backtest.report import write_html_report
 from trading_rl.envs.spot_trading_env import SpotTradingConfig, SpotTradingEnv
 from trading_rl.utils.config import load_yaml
 
-PolicyFn = Callable[[dict[str, np.ndarray], dict[str, Any]], int]
+PolicyFn = Callable[[np.ndarray, dict[str, Any]], int]
 
 
 def evaluate_policy(
@@ -58,7 +58,7 @@ def named_policy(name: str, seed: int = 7) -> PolicyFn:
 
 
 def rllib_policy(algo: Any) -> PolicyFn:
-    def _policy(obs: dict[str, np.ndarray], _info: dict[str, Any]) -> int:
+    def _policy(obs: np.ndarray, _info: dict[str, Any]) -> int:
         if hasattr(algo, "compute_single_action"):
             return int(algo.compute_single_action(obs))
         if hasattr(algo, "get_policy"):

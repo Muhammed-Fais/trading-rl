@@ -13,3 +13,5 @@ artifacts/
 ray_results/
 wandb/
 mlruns/
+mlflow.db
+mlflow.db-*

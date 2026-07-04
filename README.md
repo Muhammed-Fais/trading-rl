@@ -51,7 +51,7 @@ uv run trading-rl-train-rllib --config configs/train/ppo.yaml
 Training logs to MLflow by default:
 
 ```bash
-uv run mlflow ui --backend-store-uri mlruns
+uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
 Then open `http://127.0.0.1:5000`.

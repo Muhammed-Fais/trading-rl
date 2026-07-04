@@ -29,12 +29,11 @@ def test_env_reset_and_step_contract() -> None:
     )
 
     obs, info = env.reset(seed=7)
-    assert obs["market"].shape[0] == 16
-    assert obs["portfolio"].shape == (4,)
+    assert obs.shape == env.observation_space.shape
     assert info["portfolio_value"] == 10_000.0
 
     next_obs, reward, terminated, truncated, next_info = env.step(1)
-    assert next_obs["market"].shape == obs["market"].shape
+    assert next_obs.shape == obs.shape
     assert isinstance(reward, float)
     assert terminated is False
     assert truncated is False
