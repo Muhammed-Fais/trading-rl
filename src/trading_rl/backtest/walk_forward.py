@@ -111,7 +111,15 @@ def main() -> None:
     parser.add_argument(
         "--policies",
         nargs="+",
-        default=["cash", "buy_and_hold", "trend", "vol_target", "mean_reversion"],
+        default=[
+            "cash",
+            "buy_and_hold",
+            "trend",
+            "vol_target",
+            "mean_reversion",
+            "trend_risk",
+            "trend_risk_defensive",
+        ],
     )
     parser.add_argument("--train-size", type=int, default=365 * 24)
     parser.add_argument("--test-size", type=int, default=90 * 24)

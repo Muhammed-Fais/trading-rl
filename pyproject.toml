@@ -31,6 +31,7 @@ trading-rl-download = "trading_rl.data.binance_client:main"
 trading-rl-evaluate = "trading_rl.agents.evaluate:main"
 trading-rl-train-rllib = "trading_rl.agents.rllib_train:main"
 trading-rl-walk-forward = "trading_rl.backtest.walk_forward:main"
+trading-rl-strategy-sweep = "trading_rl.backtest.strategy_sweep:main"
 
 [build-system]
 requires = ["hatchling"]

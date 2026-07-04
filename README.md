@@ -77,9 +77,19 @@ Run baseline walk-forward validation:
 ```bash
 uv run trading-rl-walk-forward \
   --config configs/train/ppo.yaml \
-  --policies cash buy_and_hold trend vol_target mean_reversion \
+  --policies cash buy_and_hold trend vol_target trend_risk_slow trend_risk_defensive \
   --output-dir artifacts/walk_forward/btcusdt
 ```
+
+Run a risk-aware strategy sweep:
+
+```bash
+uv run trading-rl-strategy-sweep --config configs/train/ppo.yaml
+```
+
+In the first BTCUSDT 1h sweep, `trend_risk_slow` beat buy-and-hold on the
+risk-aware score by accepting lower mean return for much lower drawdown and
+turnover.
 
 You can also generate a baseline report without training:
 

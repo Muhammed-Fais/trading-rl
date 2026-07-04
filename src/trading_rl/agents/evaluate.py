@@ -61,6 +61,23 @@ def named_policy(name: str, seed: int = 7) -> PolicyFn:
         return _vol_target_policy()
     if name == "mean_reversion":
         return _mean_reversion_policy()
+    if name == "trend_risk":
+        return _trend_risk_policy()
+    if name == "trend_risk_fast":
+        return _trend_risk_policy(short_window=12, long_window=96, realized_window=48)
+    if name == "trend_risk_slow":
+        return _trend_risk_policy(short_window=48, long_window=336, realized_window=120)
+    if name == "trend_risk_defensive":
+        return _trend_risk_policy(
+            short_window=24,
+            long_window=168,
+            realized_window=72,
+            target_hourly_vol=0.006,
+            max_portfolio_drawdown=0.08,
+            trailing_stop=0.10,
+            cooldown_steps=72,
+            max_exposure=0.75,
+        )
     raise ValueError(f"Unknown policy: {name}")
 
 
@@ -139,7 +156,18 @@ def main() -> None:
     parser.add_argument("--config", default="configs/train/ppo.yaml")
     parser.add_argument(
         "--policy",
-        choices=["cash", "buy_and_hold", "random", "trend", "vol_target", "mean_reversion"],
+        choices=[
+            "cash",
+            "buy_and_hold",
+            "random",
+            "trend",
+            "vol_target",
+            "mean_reversion",
+            "trend_risk",
+            "trend_risk_fast",
+            "trend_risk_slow",
+            "trend_risk_defensive",
+        ],
         default="buy_and_hold",
     )
     parser.add_argument("--output", default="artifacts/reports/evaluation.html")
@@ -231,6 +259,73 @@ def _mean_reversion_policy(
         elif zscore > exit_z:
             invested = False
         return _target_action(info, 1.0 if invested else 0.0)
+
+    return _policy
+
+
+def _trend_risk_policy(
+    short_window: int = 24,
+    long_window: int = 168,
+    realized_window: int = 72,
+    target_hourly_vol: float = 0.008,
+    max_portfolio_drawdown: float = 0.12,
+    trailing_stop: float = 0.15,
+    cooldown_steps: int = 48,
+    max_exposure: float = 1.0,
+) -> PolicyFn:
+    prices: list[float] = []
+    portfolio_peak = 0.0
+    entry_peak = 0.0
+    cooldown = 0
+    invested = False
+
+    def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
+        nonlocal portfolio_peak, entry_peak, cooldown, invested
+        price = float(info["price"])
+        prices.append(price)
+        portfolio_value = float(info["portfolio_value"])
+        portfolio_peak = max(portfolio_peak, portfolio_value)
+
+        if cooldown > 0:
+            cooldown -= 1
+            invested = False
+            return _target_action(info, 0.0)
+
+        if len(prices) < max(long_window, realized_window) + 1:
+            return _target_action(info, 0.0)
+
+        portfolio_drawdown = (
+            0.0 if portfolio_peak <= 0.0 else 1.0 - portfolio_value / portfolio_peak
+        )
+        if portfolio_drawdown > max_portfolio_drawdown:
+            cooldown = cooldown_steps
+            invested = False
+            return _target_action(info, 0.0)
+
+        short_ma = float(np.mean(prices[-short_window:]))
+        long_ma = float(np.mean(prices[-long_window:]))
+        trend_on = short_ma > long_ma and price > long_ma
+        if not trend_on:
+            invested = False
+            return _target_action(info, 0.0)
+
+        if not invested:
+            invested = True
+            entry_peak = price
+        entry_peak = max(entry_peak, price)
+        price_drawdown = 0.0 if entry_peak <= 0.0 else 1.0 - price / entry_peak
+        if price_drawdown > trailing_stop:
+            cooldown = cooldown_steps
+            invested = False
+            return _target_action(info, 0.0)
+
+        log_returns = np.diff(np.log(np.asarray(prices[-realized_window:])))
+        realized_vol = float(np.std(log_returns, ddof=1))
+        if realized_vol <= 0.0:
+            exposure = max_exposure
+        else:
+            exposure = min(target_hourly_vol / realized_vol, max_exposure)
+        return _target_action(info, exposure)
 
     return _policy
 

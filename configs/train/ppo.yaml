@@ -40,5 +40,5 @@ report:
   enabled: true
   output: artifacts/reports/btcusdt_ppo_continuous_v1.html
   split: test
-  baselines: [cash, buy_and_hold, random, trend, vol_target, mean_reversion]
+  baselines: [cash, buy_and_hold, random, trend, vol_target, mean_reversion, trend_risk_slow, trend_risk_defensive]
   seed: 7
