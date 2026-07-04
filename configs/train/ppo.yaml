@@ -1,4 +1,7 @@
 experiment_name: btcusdt_ppo_smoke
+tracking:
+  uri: mlruns
+  experiment: trading-rl
 env_config:
   data_path: data/features/binance/BTCUSDT_1h_features.parquet
   initial_cash: 10000.0
@@ -24,3 +27,7 @@ training:
   num_env_runners: 1
   train_batch_size: 4096
   lr: 0.0001
+report:
+  enabled: true
+  output: artifacts/reports/btcusdt_ppo_smoke.html
+  seed: 7

@@ -46,6 +46,33 @@ uv run trading-rl-download \
 uv run trading-rl-train-rllib --config configs/train/ppo.yaml
 ```
 
+## Experiment Dashboard and Reports
+
+Training logs to MLflow by default:
+
+```bash
+uv run mlflow ui --backend-store-uri mlruns
+```
+
+Then open `http://127.0.0.1:5000`.
+
+Each run logs parameters, training metrics, checkpoints, evaluation metrics, and
+an HTML trading report artifact with:
+
+- portfolio vs buy-and-hold equity
+- underwater drawdown
+- exposure and actions
+- reward component traces
+
+You can also generate a baseline report without training:
+
+```bash
+uv run trading-rl-evaluate \
+  --config configs/train/ppo.yaml \
+  --policy buy_and_hold \
+  --output artifacts/reports/buy_and_hold.html
+```
+
 ## Research Guardrails
 
 Financial RL is unusually easy to fool. This project treats these as first-class
