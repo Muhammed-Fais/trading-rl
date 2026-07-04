@@ -91,6 +91,16 @@ In the first BTCUSDT 1h sweep, `trend_risk_slow` beat buy-and-hold on the
 risk-aware score by accepting lower mean return for much lower drawdown and
 turnover.
 
+Run the same strategy sweep across BTC and ETH without per-symbol retuning:
+
+```bash
+uv run trading-rl-multi-symbol-sweep --config configs/sweeps/btc_eth_1h.yaml
+```
+
+This is a robustness check, not a guarantee. A candidate is more interesting
+when it keeps positive mean walk-forward return across symbols using the same
+parameters.
+
 You can also generate a baseline report without training:
 
 ```bash

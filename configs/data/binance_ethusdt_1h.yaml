@@ -1,0 +1,7 @@
+source: binance_spot
+symbol: ETHUSDT
+interval: 1h
+start: "2021-01-01"
+end: "2024-12-31"
+raw_path: data/raw/binance/ETHUSDT_1h.parquet
+features_path: data/features/binance/ETHUSDT_1h_features.parquet

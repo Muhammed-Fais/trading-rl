@@ -32,6 +32,7 @@ trading-rl-evaluate = "trading_rl.agents.evaluate:main"
 trading-rl-train-rllib = "trading_rl.agents.rllib_train:main"
 trading-rl-walk-forward = "trading_rl.backtest.walk_forward:main"
 trading-rl-strategy-sweep = "trading_rl.backtest.strategy_sweep:main"
+trading-rl-multi-symbol-sweep = "trading_rl.backtest.multi_symbol_sweep:main"
 
 [build-system]
 requires = ["hatchling"]
