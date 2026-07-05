@@ -64,6 +64,51 @@ Interpretation: the initial fast grid did not find a materially better setting.
 That is useful because the current candidate remains strongest when compared
 against nearby alternatives using the same parameters across BTC and ETH.
 
+## Five-Symbol Robustness Check
+
+The first wider universe uses:
+
+- `BTCUSDT`
+- `ETHUSDT`
+- `BNBUSDT`
+- `SOLUSDT`
+- `XRPUSDT`
+
+From `artifacts/strategy_sweeps/crypto5/combined_strategy_ranking.csv`:
+
+| Policy | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Mean Turnover | Win Rate | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| buy_and_hold | 18.94% | -75.87% | 32.39% | 81.49% | 0.05% | 53.33% | 5 / 5 |
+| trend | 10.94% | -45.06% | 22.60% | 56.53% | 0.87% | 51.67% | 5 / 5 |
+| trend_risk_slow | 3.26% | -12.98% | 12.25% | 13.49% | 0.56% | 50.00% | 3 / 5 |
+
+Interpretation: buy-and-hold and trend benefit from the broad crypto bull/bear
+sample, but their drawdowns are too large for the risk profile we want. The
+trend-risk family keeps drawdown controlled, but the named `trend_risk_slow`
+setting is only positive on `3 / 5` symbols.
+
+From `artifacts/strategy_sweeps/trend_risk_grid_fast_crypto5/trend_risk_grid_ranking.csv`:
+
+| Policy | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Mean Turnover | Win Rate | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| trend_risk_grid_007 | 3.29% | -12.76% | 12.27% | 13.59% | 0.57% | 48.33% | 4 / 5 |
+| trend_risk_grid_005 | 3.06% | -12.97% | 12.39% | 17.59% | 0.58% | 46.67% | 4 / 5 |
+
+The best five-symbol grid setting uses:
+
+- short window: `24`
+- long window: `336`
+- realized volatility window: `120`
+- target hourly volatility: `0.008`
+- max portfolio drawdown guard: `0.12`
+- trailing stop: `0.15`
+- cooldown: `48`
+- max exposure: `1.0`
+
+This is the current best candidate for the next research stage. It passes the
+five-symbol promotion gates, but it is not live-ready because one of five symbols
+still has negative mean walk-forward return.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -89,6 +134,31 @@ Current guardrails:
 - separate per-symbol and combined rankings
 - turnover, drawdown, and worst-fold metrics in ranking
 - no per-symbol retuning
+- objective promotion gates before any next-stage work
+
+## Promotion Gates
+
+From `configs/sweeps/promotion_gates.yaml`, a candidate must pass:
+
+- at least `2` symbols tested
+- at least `2` positive symbols
+- mean return of at least `3%`
+- worst fold no worse than `-15%`
+- mean drawdown no higher than `15%`
+- worst fold drawdown no higher than `18%`
+- mean turnover no higher than `1%`
+- win rate of at least `50%`
+- robust score of at least `10%`
+
+These gates are not a live-trading approval. They are only a research promotion
+filter for deciding what deserves wider assets, longer history, and stricter
+out-of-sample tests.
+
+Current gate outcomes:
+
+- BTC/ETH fast grid: top candidate passes `9 / 9` gates.
+- Five-symbol fast grid: top candidate passes `9 / 9` gates.
+- Paper trading remains blocked until stricter out-of-sample tests pass.
 
 ## Reproduce
 
@@ -120,4 +190,18 @@ Run BTC + ETH trend-risk parameter grid:
 
 ```bash
 make trend-grid-fast
+```
+
+Evaluate promotion gates:
+
+```bash
+make promotion-gates
+```
+
+Run five-symbol robustness checks after downloading the extra local data:
+
+```bash
+make download-crypto5
+make crypto5-sweep
+make trend-grid-fast-crypto5
 ```

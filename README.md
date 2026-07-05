@@ -37,6 +37,7 @@ make mlflow
 make sweep
 make multi-sweep
 make trend-grid-fast
+make promotion-gates
 ```
 
 ## Download Data
@@ -125,6 +126,25 @@ make trend-grid-fast
 
 The fast grid is the normal iteration loop. Use `make trend-grid` for the wider
 search once the fast grid points to a promising neighborhood.
+
+Evaluate objective promotion gates:
+
+```bash
+make promotion-gates
+```
+
+Promotion gates convert a ranking CSV into pass/fail evidence for the next
+research stage. They check cross-symbol coverage, positive-symbol count, mean
+return, worst fold, drawdown, turnover, win rate, and robust score.
+
+For wider robustness checks, download the five-asset universe and run the same
+process without changing strategy parameters per symbol:
+
+```bash
+make download-crypto5
+make crypto5-sweep
+make trend-grid-fast-crypto5
+```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research
 conclusions.

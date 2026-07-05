@@ -1,0 +1,13 @@
+ranking_path: artifacts/strategy_sweeps/trend_risk_grid_fast_btc_eth/trend_risk_grid_ranking.csv
+output_dir: artifacts/promotion_gates/trend_risk_grid_fast_btc_eth
+
+criteria:
+  min_symbols_tested: 2
+  min_positive_symbols: 2
+  min_mean_return: 0.03
+  min_worst_fold_return: -0.15
+  max_mean_drawdown: 0.15
+  max_worst_fold_drawdown: 0.18
+  max_mean_turnover: 0.01
+  min_win_rate: 0.5
+  min_robust_score: 0.1
