@@ -577,12 +577,28 @@ The v2 report is:
 
 `artifacts/reports/btcusdt_ppo_overlay_v2.html`
 
+The v3 run pushed the participation reward harder and trained for ten
+iterations:
+
+`configs/train/ppo_overlay_btc_v3.yaml`
+
+This made the held-out result worse:
+
+| Policy | Return | Benchmark Return | Max Drawdown | Average Exposure |
+| --- | ---: | ---: | ---: | ---: |
+| PPO overlay v2 | -4.20% | -8.83% | 4.59% | 4.47% |
+| PPO overlay v3 | -6.13% | -8.83% | 6.36% | 4.66% |
+
+The v3 report is:
+
+`artifacts/reports/btcusdt_ppo_overlay_v3.html`
+
 Interpretation: this is not a trading candidate. It proves the RL overlay
-plumbing works. V2 is a small improvement over v1, but the agent is still too
-conservative and still loses money in the held-out test. Next RL work should
-increase useful participation without allowing drawdown to escape the hard risk
-cap, then evaluate across the same purified holdout workflow and portfolio
-gates.
+plumbing works. V2 is a small improvement over v1, but v3 shows that simply
+pushing harder on participation can worsen drawdown without producing useful
+exposure. Next RL work should use a richer objective, likely with behavior
+cloning or advantage-style targets from the strongest rule baseline, then
+evaluate across the same purified holdout workflow and portfolio gates.
 
 Current direction:
 

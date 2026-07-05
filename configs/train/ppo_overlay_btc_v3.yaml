@@ -1,0 +1,60 @@
+experiment_name: btcusdt_ppo_overlay_v3
+tracking:
+  uri: sqlite:///mlflow.db
+  experiment: trading-rl
+env_config:
+  env_type: risk_overlay
+  data_path: data/features/binance/BTCUSDT_1h_features.parquet
+  initial_cash: 10000.0
+  lookback: 64
+  episode_length: 720
+  split: train
+  train_fraction: 0.7
+  validation_fraction: 0.15
+  random_start: true
+  fee_rate: 0.001
+  slippage_rate: 0.0005
+  min_trade_notional: 10.0
+  action_mode: continuous
+  no_trade_band: 0.05
+  normalize_observations: true
+  observation_clip: 10.0
+  base_policy_config:
+    short_window: 24
+    long_window: 336
+    realized_window: 120
+    target_hourly_vol: 0.008
+    max_portfolio_drawdown: 0.12
+    trailing_stop: 0.15
+    participation_floor: 0.20
+    participation_mode: always
+    cooldown_steps: 48
+    recovery_reentry_mode: "off"
+    max_exposure: 1.0
+  overlay_reward:
+    upside_participation_weight: 5.0
+    upside_underuse_penalty: 3.0
+    min_base_target_for_bonus: 0.05
+  reward:
+    return_weight: 1.0
+    benchmark_weight: 0.02
+    drawdown_penalty: 0.30
+    downside_penalty: 0.15
+    volatility_penalty: 0.03
+    turnover_penalty: 0.02
+    exposure_penalty: 0.0
+    max_position_fraction: 1.0
+    reward_clip: 0.05
+    rolling_window: 32
+training:
+  stop_iterations: 10
+  checkpoint_frequency: 10
+  num_env_runners: 0
+  train_batch_size: 2048
+  lr: 0.0001
+report:
+  enabled: true
+  output: artifacts/reports/btcusdt_ppo_overlay_v3.html
+  split: test
+  baselines: [cash, buy_and_hold, trend_risk_slow, trend_risk_defensive]
+  seed: 7
