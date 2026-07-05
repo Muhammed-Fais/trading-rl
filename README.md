@@ -45,6 +45,7 @@ make tune-test-core-exposure
 make tune-test-core-exposure-crypto3
 make failure-diagnostics
 make portfolio-report
+make portfolio-gates
 ```
 
 ## Download Data
@@ -159,6 +160,7 @@ make tune-test-core-exposure
 make tune-test-core-exposure-crypto3
 make failure-diagnostics
 make portfolio-report
+make portfolio-gates
 ```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research

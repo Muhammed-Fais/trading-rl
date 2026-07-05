@@ -336,6 +336,12 @@ the equal-weight combined BTC/ETH/BNB strategy portfolio produced:
 | --- | ---: | ---: | ---: | ---: | ---: |
 | selected_trend_risk | 43.63% | 94.87% | 11.83% | 2.11 | 13.47% |
 
+Activity metrics:
+
+| Active Months | Inactive Months | Active Month Ratio |
+| ---: | ---: | ---: |
+| 3 / 12 | 9 / 12 | 25.00% |
+
 The generated HTML report is:
 
 `artifacts/tune_test/core_exposure_crypto3_2021_2024/portfolio_report/portfolio_report.html`
@@ -353,6 +359,19 @@ keeps drawdown controlled while capturing less than half of buy-and-hold upside
 in a strong crypto year. The strategy is risk-controlled, but the next research
 question is whether we can increase participation without losing the drawdown
 profile.
+
+The portfolio now has explicit promotion gates in
+`artifacts/tune_test/core_exposure_crypto3_2021_2024/portfolio_report/portfolio_gate_results.csv`.
+It passes return, drawdown, and Sharpe gates, but fails activity gates:
+
+| Gate | Value | Required | Pass |
+| --- | ---: | ---: | --- |
+| total_return | 43.63% | >= 20.00% | yes |
+| max_drawdown | 11.83% | <= 15.00% | yes |
+| active_month_ratio | 25.00% | >= 60.00% | no |
+| active_months | 3 | >= 8 | no |
+| inactive_months | 9 | <= 4 | no |
+| sharpe | 2.11 | >= 1.00 | yes |
 
 The combined report goes flat after March because each selected symbol hits the
 portfolio drawdown guard, exits, and remains in cash. This is an intentional
@@ -533,4 +552,10 @@ Run combined portfolio report:
 
 ```bash
 make portfolio-report
+```
+
+Run portfolio promotion gates:
+
+```bash
+make portfolio-gates
 ```

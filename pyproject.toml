@@ -39,6 +39,7 @@ trading-rl-calendar-holdout = "trading_rl.backtest.calendar_holdout:main"
 trading-rl-tune-test = "trading_rl.backtest.tune_test:main"
 trading-rl-failure-diagnostics = "trading_rl.backtest.failure_diagnostics:main"
 trading-rl-portfolio-report = "trading_rl.backtest.portfolio_report:main"
+trading-rl-portfolio-gates = "trading_rl.backtest.portfolio_gates:main"
 
 [build-system]
 requires = ["hatchling"]

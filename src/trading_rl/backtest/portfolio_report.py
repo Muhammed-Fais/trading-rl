@@ -18,19 +18,25 @@ def run_portfolio_report(config: dict[str, Any]) -> tuple[pd.DataFrame, pd.DataF
     output_dir.mkdir(parents=True, exist_ok=True)
     policy = str(config.get("policy", "selected_trend_risk"))
     symbols = [str(symbol).upper() for symbol in config["symbols"]]
+    active_exposure_threshold = float(config.get("active_exposure_threshold", 0.05))
 
     histories = _load_symbol_histories(history_root, symbols, policy)
     portfolio = combine_equal_weight_portfolio(histories)
     monthly = monthly_returns(portfolio)
     metrics = calculate_metrics(portfolio)
+    activity = activity_metrics(monthly, active_exposure_threshold)
 
     portfolio.to_parquet(output_dir / "portfolio_history.parquet", index=False)
     monthly.to_csv(output_dir / "monthly_returns.csv", index=False)
-    pd.DataFrame([metrics.as_dict()]).to_csv(output_dir / "portfolio_metrics.csv", index=False)
+    pd.DataFrame([{**metrics.as_dict(), **activity}]).to_csv(
+        output_dir / "portfolio_metrics.csv",
+        index=False,
+    )
     report_path = write_portfolio_html_report(
         portfolio,
         monthly,
         metrics,
+        activity,
         output_dir / "portfolio_report.html",
         str(config.get("title", "Portfolio Report")),
     )
@@ -108,10 +114,30 @@ def monthly_returns(portfolio: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def activity_metrics(monthly: pd.DataFrame, active_exposure_threshold: float) -> dict[str, float]:
+    if monthly.empty:
+        return {
+            "active_months": 0.0,
+            "inactive_months": 0.0,
+            "total_months": 0.0,
+            "active_month_ratio": 0.0,
+        }
+    active = monthly["average_exposure"] >= active_exposure_threshold
+    active_months = int(active.sum())
+    total_months = int(len(monthly))
+    return {
+        "active_months": float(active_months),
+        "inactive_months": float(total_months - active_months),
+        "total_months": float(total_months),
+        "active_month_ratio": float(active_months / total_months),
+    }
+
+
 def write_portfolio_html_report(
     portfolio: pd.DataFrame,
     monthly: pd.DataFrame,
     metrics: PerformanceMetrics,
+    activity: dict[str, float],
     output_path: str | Path,
     title: str,
 ) -> Path:
@@ -188,7 +214,7 @@ def write_portfolio_html_report(
         col=1,
     )
     fig.update_layout(
-        title=_title_with_metrics(title, metrics),
+        title=_title_with_metrics(title, metrics, activity),
         template="plotly_white",
         height=1350,
         hovermode="x unified",
@@ -233,7 +259,13 @@ def _symbols_from_portfolio(portfolio: pd.DataFrame) -> list[str]:
     return sorted(col.removesuffix(suffix) for col in portfolio.columns if col.endswith(suffix))
 
 
-def _title_with_metrics(title: str, metrics: PerformanceMetrics) -> str:
+def _title_with_metrics(
+    title: str,
+    metrics: PerformanceMetrics,
+    activity: dict[str, float],
+) -> str:
+    active_months = int(activity.get("active_months", 0.0))
+    total_months = int(activity.get("total_months", 0.0))
     return (
         f"{title}<br><sup>"
         f"Return {metrics.total_return:.2%} | "
@@ -241,7 +273,8 @@ def _title_with_metrics(title: str, metrics: PerformanceMetrics) -> str:
         f"Excess {metrics.excess_return:.2%} | "
         f"Max DD {metrics.max_drawdown:.2%} | "
         f"Sharpe {metrics.sharpe:.2f} | "
-        f"Sortino {metrics.sortino:.2f}"
+        f"Sortino {metrics.sortino:.2f} | "
+        f"Active Months {active_months}/{total_months}"
         f"</sup>"
     )
 
