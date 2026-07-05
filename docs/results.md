@@ -544,10 +544,26 @@ Smoke evaluation result:
 | --- | ---: | ---: | ---: | ---: |
 | PPO overlay smoke | -4.61% | -8.83% | 4.83% | 4.61% |
 
+The first small v1 run used five PPO iterations:
+
+`configs/train/ppo_overlay_btc_v1.yaml`
+
+Training episode return improved from `-15.73` to `-9.64`, but held-out test
+performance was still negative:
+
+| Policy | Return | Benchmark Return | Max Drawdown | Average Exposure |
+| --- | ---: | ---: | ---: | ---: |
+| PPO overlay v1 | -4.82% | -8.83% | 4.88% | 4.91% |
+
+The v1 report is:
+
+`artifacts/reports/btcusdt_ppo_overlay_v1.html`
+
 Interpretation: this is not a trading candidate. It proves the RL overlay
-plumbing works. Next RL work should train longer, evaluate across the same
-purified holdout workflow, and compare against the core trend-risk baseline and
-portfolio gates.
+plumbing works, and v1 shows the agent is learning to stay very conservative
+inside the risk cap. Next RL work should train longer with a reward/objective
+that explicitly values useful participation, then evaluate across the same
+purified holdout workflow and portfolio gates.
 
 Current direction:
 

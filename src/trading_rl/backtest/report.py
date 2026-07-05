@@ -75,6 +75,22 @@ def write_html_report(
             row=3,
             col=1,
         )
+    for column, name in (
+        ("base_target_fraction", "Base Risk Cap"),
+        ("overlay_multiplier", "Overlay Multiplier"),
+        ("effective_target_fraction", "Effective Target"),
+    ):
+        if column in enriched.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=enriched[column],
+                    name=name,
+                    mode="lines",
+                ),
+                row=3,
+                col=1,
+            )
     if "action" in enriched.columns:
         fig.add_trace(
             go.Scatter(

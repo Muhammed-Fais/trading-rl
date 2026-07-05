@@ -221,7 +221,7 @@ def _history_row(
         timestamp = env.df.loc[env.current_step, "open_time"]
     price = float(env.prices[env.current_step])
     benchmark_value = initial_value * price / start_price
-    return {
+    row = {
         "timestamp": timestamp,
         "step": int(info["step"]),
         "price": price,
@@ -235,6 +235,14 @@ def _history_row(
         "action": _action_value(action),
         "target_fraction": info.get("target_fraction"),
     }
+    for key in (
+        "base_target_fraction",
+        "overlay_multiplier",
+        "effective_target_fraction",
+    ):
+        if key in info and info[key] is not None:
+            row[key] = float(info[key])
+    return row
 
 
 def main() -> None:
