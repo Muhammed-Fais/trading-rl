@@ -457,6 +457,36 @@ parameter family, the policies that stay active enough are not profitable or
 broad enough. The next research step should introduce a different re-entry or
 regime model rather than only increasing the activity weight.
 
+## Confirmed Recovery Re-Entry Test
+
+The trend-risk policy now supports `recovery_reentry_mode=confirmed_reset`. This
+mode is stricter than the naive peak reset: after a portfolio drawdown stop and
+cooldown, it resets the portfolio peak only when price is back near a recent
+high and trend is confirmed. The intent is to restore normal volatility-targeted
+sizing after a genuine recovery, while avoiding blind re-entry during weak
+rebounds.
+
+The activity-focused crypto3 grid tested:
+
+- `off`
+- `momentum`
+- `confirmed_reset`
+
+The selector still chose `recovery_reentry_mode=off`.
+
+Selection-period comparison:
+
+| Variant | Mean Return | Min Fold Return | Mean Active Steps | Mean Drawdown | Max Fold Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| selected off | 2.82% | -11.91% | 39.15% | 12.21% | 13.46% | 3 / 3 |
+| best confirmed_reset | 0.14% | -23.94% | 61.42% | 18.03% | 25.65% | 2 / 3 |
+| most active confirmed_reset | -2.29% | -25.14% | 70.90% | 19.51% | 30.91% | 1 / 3 |
+
+Interpretation: confirmed reset solves activity mechanically, but it pays too
+much in drawdown and symbol breadth. This is not a promotion candidate. The next
+useful direction is a regime classifier or allocation overlay that decides when
+re-entry risk is worth taking, rather than resetting solely from price recovery.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not

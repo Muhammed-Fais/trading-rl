@@ -115,6 +115,8 @@ def trend_risk_policy(
     recovery_momentum_window: int = 72,
     recovery_momentum_threshold: float = 0.05,
     recovery_drawdown_buffer: float = 0.03,
+    recovery_confirm_window: int = 168,
+    recovery_confirm_threshold: float = 0.03,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     return _trend_risk_policy(
@@ -140,6 +142,8 @@ def trend_risk_policy(
         recovery_momentum_window=recovery_momentum_window,
         recovery_momentum_threshold=recovery_momentum_threshold,
         recovery_drawdown_buffer=recovery_drawdown_buffer,
+        recovery_confirm_window=recovery_confirm_window,
+        recovery_confirm_threshold=recovery_confirm_threshold,
         max_exposure=max_exposure,
     )
 
@@ -353,6 +357,8 @@ def _trend_risk_policy(
     recovery_momentum_window: int = 72,
     recovery_momentum_threshold: float = 0.05,
     recovery_drawdown_buffer: float = 0.03,
+    recovery_confirm_window: int = 168,
+    recovery_confirm_threshold: float = 0.03,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     prices: list[float] = []
@@ -368,8 +374,10 @@ def _trend_risk_policy(
         raise ValueError("trailing_stop_mode must be one of: percent, atr")
     if participation_mode not in {"momentum", "always"}:
         raise ValueError("participation_mode must be one of: momentum, always")
-    if recovery_reentry_mode not in {"off", "momentum"}:
-        raise ValueError("recovery_reentry_mode must be one of: off, momentum")
+    if recovery_reentry_mode not in {"off", "momentum", "confirmed_reset"}:
+        raise ValueError(
+            "recovery_reentry_mode must be one of: off, momentum, confirmed_reset"
+        )
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
         nonlocal portfolio_peak, entry_peak, cooldown, cooldown_reason, invested
@@ -405,6 +413,20 @@ def _trend_risk_policy(
         short_ma = float(np.mean(prices[-short_window:]))
         long_ma = float(np.mean(prices[-long_window:]))
         trend_on = short_ma > long_ma and price > long_ma
+        if risk_off and _confirmed_recovery_reset_allowed(
+            prices=prices,
+            short_ma=short_ma,
+            long_ma=long_ma,
+            mode=recovery_reentry_mode,
+            confirm_window=recovery_confirm_window,
+            confirm_threshold=recovery_confirm_threshold,
+        ):
+            portfolio_peak = portfolio_value
+            entry_peak = price
+            risk_off = False
+            recovery_mode = False
+            cooldown_reason = ""
+
         recovery_exposure_value = _recovery_reentry_exposure(
             prices=prices,
             short_ma=short_ma,
@@ -527,7 +549,7 @@ def _recovery_reentry_exposure(
     momentum_threshold: float,
     max_exposure: float,
 ) -> float:
-    if mode == "off" or exposure <= 0.0 or len(prices) <= momentum_window:
+    if mode != "momentum" or exposure <= 0.0 or len(prices) <= momentum_window:
         return 0.0
     price = prices[-1]
     base_price = prices[-momentum_window - 1]
@@ -538,6 +560,26 @@ def _recovery_reentry_exposure(
     if momentum >= momentum_threshold and trend_confirmed:
         return float(np.clip(exposure, 0.0, max_exposure))
     return 0.0
+
+
+def _confirmed_recovery_reset_allowed(
+    *,
+    prices: list[float],
+    short_ma: float,
+    long_ma: float,
+    mode: str,
+    confirm_window: int,
+    confirm_threshold: float,
+) -> bool:
+    if mode != "confirmed_reset" or confirm_window <= 0 or len(prices) < confirm_window:
+        return False
+    price = prices[-1]
+    recent_high = max(prices[-confirm_window:])
+    if recent_high <= 0.0:
+        return False
+    near_recovery_high = price >= recent_high * (1.0 - confirm_threshold)
+    trend_confirmed = price > short_ma > long_ma
+    return bool(near_recovery_high and trend_confirmed)
 
 
 def _active_trailing_stop(

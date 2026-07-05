@@ -58,11 +58,13 @@ grid:
   momentum_threshold: [0.05]
   cooldown_steps: [48]
   reset_peak_after_drawdown: [false]
-  recovery_reentry_mode: ["off", momentum]
+  recovery_reentry_mode: ["off", momentum, confirmed_reset]
   recovery_exposure: [0.10, 0.20]
   recovery_momentum_window: [72]
   recovery_momentum_threshold: [0.05, 0.10]
   recovery_drawdown_buffer: [0.03, 0.06]
+  recovery_confirm_window: [168]
+  recovery_confirm_threshold: [0.03]
   max_exposure: [1.0]
 
 progress_every: 25
