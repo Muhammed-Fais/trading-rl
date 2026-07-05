@@ -354,6 +354,23 @@ in a strong crypto year. The strategy is risk-controlled, but the next research
 question is whether we can increase participation without losing the drawdown
 profile.
 
+The combined report goes flat after March because each selected symbol hits the
+portfolio drawdown guard, exits, and remains in cash. This is an intentional
+consequence of the current risk rule, not an HTML/reporting issue.
+
+We tested a `reset_peak_after_drawdown` option that allows re-entry after the
+drawdown cooldown by resetting the local risk peak. It kept the strategy active,
+but the 2024 holdout risk profile became much worse:
+
+| Variant | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| reset off | 43.63% | 34.71% | 12.48% | 12.86% | 3 / 3 |
+| reset on | 21.69% | -18.14% | 39.55% | 51.38% | 2 / 3 |
+
+Interpretation: simple re-entry after a drawdown stop is not acceptable. The next
+research step should be a more selective re-entry rule, such as requiring a new
+regime confirmation or portfolio-level recovery signal before restoring risk.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not

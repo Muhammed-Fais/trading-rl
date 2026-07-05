@@ -109,6 +109,7 @@ def trend_risk_policy(
     momentum_window: int = 72,
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
+    reset_peak_after_drawdown: bool = False,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     return _trend_risk_policy(
@@ -128,6 +129,7 @@ def trend_risk_policy(
         momentum_window=momentum_window,
         momentum_threshold=momentum_threshold,
         cooldown_steps=cooldown_steps,
+        reset_peak_after_drawdown=reset_peak_after_drawdown,
         max_exposure=max_exposure,
     )
 
@@ -335,6 +337,7 @@ def _trend_risk_policy(
     momentum_window: int = 72,
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
+    reset_peak_after_drawdown: bool = False,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     prices: list[float] = []
@@ -342,6 +345,7 @@ def _trend_risk_policy(
     portfolio_peak = 0.0
     entry_peak = 0.0
     cooldown = 0
+    cooldown_reason = ""
     invested = False
     if trailing_stop_mode not in {"percent", "atr"}:
         raise ValueError("trailing_stop_mode must be one of: percent, atr")
@@ -349,7 +353,7 @@ def _trend_risk_policy(
         raise ValueError("participation_mode must be one of: momentum, always")
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
-        nonlocal portfolio_peak, entry_peak, cooldown, invested
+        nonlocal portfolio_peak, entry_peak, cooldown, cooldown_reason, invested
         price = float(info["price"])
         previous_price = prices[-1] if prices else price
         high = float(info.get("high", price))
@@ -362,6 +366,14 @@ def _trend_risk_policy(
 
         if cooldown > 0:
             cooldown -= 1
+            if (
+                cooldown == 0
+                and cooldown_reason == "portfolio_drawdown"
+                and reset_peak_after_drawdown
+            ):
+                portfolio_peak = portfolio_value
+                entry_peak = price
+                cooldown_reason = ""
             invested = False
             return _target_action(info, 0.0)
 
@@ -373,6 +385,7 @@ def _trend_risk_policy(
         )
         if portfolio_drawdown > max_portfolio_drawdown:
             cooldown = cooldown_steps
+            cooldown_reason = "portfolio_drawdown"
             invested = False
             return _target_action(info, 0.0)
 
@@ -410,6 +423,7 @@ def _trend_risk_policy(
         )
         if price_drawdown > active_trailing_stop:
             cooldown = cooldown_steps
+            cooldown_reason = "trailing_stop"
             invested = False
             return _target_action(info, 0.0)
 

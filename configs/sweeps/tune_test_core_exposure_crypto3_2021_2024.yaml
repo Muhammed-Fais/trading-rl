@@ -47,6 +47,7 @@ grid:
   momentum_window: [72]
   momentum_threshold: [0.05]
   cooldown_steps: [48]
+  reset_peak_after_drawdown: [false, true]
   max_exposure: [1.0]
 
 progress_every: 25

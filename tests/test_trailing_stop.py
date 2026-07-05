@@ -1,6 +1,10 @@
 import pytest
 
-from trading_rl.agents.evaluate import _active_trailing_stop, _momentum_participation_exposure
+from trading_rl.agents.evaluate import (
+    _active_trailing_stop,
+    _momentum_participation_exposure,
+    trend_risk_policy,
+)
 
 
 def test_percent_trailing_stop_uses_configured_value() -> None:
@@ -85,3 +89,35 @@ def test_always_participation_uses_floor_without_momentum_condition() -> None:
     )
 
     assert exposure == pytest.approx(0.20)
+
+
+def test_drawdown_cooldown_reset_allows_reentry_after_risk_stop() -> None:
+    policy = trend_risk_policy(
+        short_window=2,
+        long_window=3,
+        realized_window=3,
+        max_portfolio_drawdown=0.10,
+        participation_floor=0.2,
+        participation_mode="always",
+        cooldown_steps=2,
+        reset_peak_after_drawdown=True,
+    )
+    prices = [100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0]
+    values = [10000.0, 11500.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    actions = []
+
+    for price, value in zip(prices, values, strict=True):
+        actions.append(
+            policy(
+                _obs=None,
+                info={
+                    "price": price,
+                    "high": price,
+                    "low": price,
+                    "portfolio_value": value,
+                    "action_mode": "continuous",
+                },
+            )
+        )
+
+    assert float(actions[-1][0]) > 0.0
