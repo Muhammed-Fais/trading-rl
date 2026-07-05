@@ -104,6 +104,9 @@ def trend_risk_policy(
     atr_multiplier: float = 3.0,
     min_trailing_stop: float = 0.06,
     max_trailing_stop: float = 0.20,
+    participation_floor: float = 0.0,
+    momentum_window: int = 72,
+    momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
@@ -119,6 +122,9 @@ def trend_risk_policy(
         atr_multiplier=atr_multiplier,
         min_trailing_stop=min_trailing_stop,
         max_trailing_stop=max_trailing_stop,
+        participation_floor=participation_floor,
+        momentum_window=momentum_window,
+        momentum_threshold=momentum_threshold,
         cooldown_steps=cooldown_steps,
         max_exposure=max_exposure,
     )
@@ -322,6 +328,9 @@ def _trend_risk_policy(
     atr_multiplier: float = 3.0,
     min_trailing_stop: float = 0.06,
     max_trailing_stop: float = 0.20,
+    participation_floor: float = 0.0,
+    momentum_window: int = 72,
+    momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
@@ -365,7 +374,17 @@ def _trend_risk_policy(
         short_ma = float(np.mean(prices[-short_window:]))
         long_ma = float(np.mean(prices[-long_window:]))
         trend_on = short_ma > long_ma and price > long_ma
+        participation_exposure = 0.0
         if not trend_on:
+            participation_exposure = _momentum_participation_exposure(
+                prices=prices,
+                short_ma=short_ma,
+                participation_floor=participation_floor,
+                momentum_window=momentum_window,
+                momentum_threshold=momentum_threshold,
+                max_exposure=max_exposure,
+            )
+        if not trend_on and participation_exposure <= 0.0:
             invested = False
             return _target_action(info, 0.0)
 
@@ -394,9 +413,32 @@ def _trend_risk_policy(
             exposure = max_exposure
         else:
             exposure = min(target_hourly_vol / realized_vol, max_exposure)
+        if participation_exposure > 0.0:
+            exposure = participation_exposure
         return _target_action(info, exposure)
 
     return _policy
+
+
+def _momentum_participation_exposure(
+    *,
+    prices: list[float],
+    short_ma: float,
+    participation_floor: float,
+    momentum_window: int,
+    momentum_threshold: float,
+    max_exposure: float,
+) -> float:
+    if participation_floor <= 0.0 or len(prices) <= momentum_window:
+        return 0.0
+    price = prices[-1]
+    base_price = prices[-momentum_window - 1]
+    if base_price <= 0.0:
+        return 0.0
+    momentum = price / base_price - 1.0
+    if momentum >= momentum_threshold and price > short_ma:
+        return float(np.clip(participation_floor, 0.0, max_exposure))
+    return 0.0
 
 
 def _active_trailing_stop(

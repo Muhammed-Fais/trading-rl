@@ -40,6 +40,7 @@ make trend-grid-fast
 make promotion-gates
 make calendar-holdout
 make tune-test
+make tune-test-participation
 make failure-diagnostics
 ```
 
@@ -150,6 +151,7 @@ make trend-grid-fast-crypto5
 make trend-grid-adaptive-crypto5
 make calendar-holdout
 make tune-test
+make tune-test-participation
 make failure-diagnostics
 ```
 

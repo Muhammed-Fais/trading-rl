@@ -1,6 +1,6 @@
 import pytest
 
-from trading_rl.agents.evaluate import _active_trailing_stop
+from trading_rl.agents.evaluate import _active_trailing_stop, _momentum_participation_exposure
 
 
 def test_percent_trailing_stop_uses_configured_value() -> None:
@@ -43,3 +43,29 @@ def test_atr_trailing_stop_respects_minimum() -> None:
     )
 
     assert stop == pytest.approx(0.06)
+
+
+def test_momentum_participation_requires_positive_momentum() -> None:
+    exposure = _momentum_participation_exposure(
+        prices=[100.0, 103.0, 108.0],
+        short_ma=104.0,
+        participation_floor=0.25,
+        momentum_window=2,
+        momentum_threshold=0.05,
+        max_exposure=1.0,
+    )
+
+    assert exposure == pytest.approx(0.25)
+
+
+def test_momentum_participation_stays_off_without_floor() -> None:
+    exposure = _momentum_participation_exposure(
+        prices=[100.0, 103.0, 108.0],
+        short_ma=104.0,
+        participation_floor=0.0,
+        momentum_window=2,
+        momentum_threshold=0.05,
+        max_exposure=1.0,
+    )
+
+    assert exposure == pytest.approx(0.0)

@@ -215,6 +215,37 @@ under-participation after the risk/trend filter goes defensive. The next
 candidate should improve re-entry and upside participation while preserving the
 drawdown cap.
 
+## Participation Re-Entry Test
+
+The trend-risk policy now supports an optional momentum participation floor. If
+the slow trend filter is still off but recent momentum is strong, the strategy
+can take a small floor exposure while keeping the same portfolio drawdown guard,
+trailing stop, and cooldown rules.
+
+Purified selection on `2021-2023` chose:
+
+- participation floor: `0.30`
+- momentum window: `168`
+- momentum threshold: `0.10`
+
+However, this selected participation setting produced the same `2024` holdout
+metrics as the baseline because the trigger did not materially change holdout
+actions.
+
+A looser diagnostic candidate, `participation_floor=0.30`,
+`momentum_window=72`, `momentum_threshold=0.05`, slightly improved the aggregate
+holdout score but did not solve the breadth problem:
+
+| Policy | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline | 23.77% | -5.86% | 12.31% | 12.51% | 3 / 5 |
+| participation_72_005_030 | 23.96% | -4.35% | 12.39% | 12.73% | 3 / 5 |
+
+Interpretation: simple momentum re-entry is directionally useful for SOL, but it
+does not repair XRP or improve positive-symbol breadth. The next candidate
+should use a stronger regime-aware participation model, not just a small
+momentum floor.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -329,6 +360,12 @@ Run purified tune/test:
 
 ```bash
 make tune-test
+```
+
+Run participation tune/test:
+
+```bash
+make tune-test-participation
 ```
 
 Run failure diagnostics:
