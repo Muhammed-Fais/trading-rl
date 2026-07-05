@@ -37,6 +37,7 @@ trading-rl-trend-risk-grid = "trading_rl.backtest.trend_risk_grid:main"
 trading-rl-promotion-gates = "trading_rl.backtest.promotion_gates:main"
 trading-rl-calendar-holdout = "trading_rl.backtest.calendar_holdout:main"
 trading-rl-tune-test = "trading_rl.backtest.tune_test:main"
+trading-rl-failure-diagnostics = "trading_rl.backtest.failure_diagnostics:main"
 
 [build-system]
 requires = ["hatchling"]

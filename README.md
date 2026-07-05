@@ -40,6 +40,7 @@ make trend-grid-fast
 make promotion-gates
 make calendar-holdout
 make tune-test
+make failure-diagnostics
 ```
 
 ## Download Data
@@ -149,6 +150,7 @@ make trend-grid-fast-crypto5
 make trend-grid-adaptive-crypto5
 make calendar-holdout
 make tune-test
+make failure-diagnostics
 ```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research

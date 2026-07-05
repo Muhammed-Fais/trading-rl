@@ -183,6 +183,38 @@ looking at `2024`, but the holdout still weakens from `5 / 5` positive symbols
 in selection to `3 / 5` in `2024`. That blocks paper trading and points to
 regime and per-symbol failure diagnostics as the next research step.
 
+## Failure Diagnostics
+
+From `artifacts/diagnostics/crypto5_2021_2024/symbol_summary.csv`, the negative
+holdout symbols are:
+
+| Symbol | Strategy Return | Benchmark Return | Max Drawdown | Average Exposure | Missed Benchmark Return |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| SOLUSDT | -5.86% | 90.82% | 12.51% | 2.70% | 96.68% |
+| XRPUSDT | -2.37% | 253.08% | 12.35% | 3.74% | 255.44% |
+
+The strategy protected capital in down regimes but missed too much upside in
+trend-up regimes:
+
+- SOL trend-up high-vol: strategy `3.31%`, benchmark `268.12%`, average exposure `8.00%`
+- SOL trend-up low-vol: strategy `0.90%`, benchmark `196.59%`, average exposure `0.33%`
+- XRP trend-up high-vol: strategy `0.00%`, benchmark `708.66%`, average exposure `0.00%`
+- XRP trend-up low-vol: strategy `1.49%`, benchmark `83.28%`, average exposure `15.89%`
+
+Worst monthly failures:
+
+| Symbol | Month | Strategy Return | Benchmark Return | Average Exposure |
+| --- | --- | ---: | ---: | ---: |
+| BNBUSDT | 2024-01 | -6.30% | -5.92% | 23.38% |
+| ETHUSDT | 2024-01 | -5.58% | 2.32% | 10.59% |
+| SOLUSDT | 2024-02 | -5.07% | 29.62% | 18.47% |
+| XRPUSDT | 2024-02 | -2.37% | 16.57% | 46.70% |
+
+Interpretation: the current blocker is not uncontrolled losses. The blocker is
+under-participation after the risk/trend filter goes defensive. The next
+candidate should improve re-entry and upside participation while preserving the
+drawdown cap.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -297,4 +329,10 @@ Run purified tune/test:
 
 ```bash
 make tune-test
+```
+
+Run failure diagnostics:
+
+```bash
+make failure-diagnostics
 ```

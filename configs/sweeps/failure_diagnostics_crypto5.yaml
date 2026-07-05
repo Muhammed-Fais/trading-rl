@@ -1,0 +1,6 @@
+history_root: artifacts/tune_test/crypto5_2021_2024/holdout
+output_dir: artifacts/diagnostics/crypto5_2021_2024
+policy: selected_trend_risk
+benchmark_policy: buy_and_hold
+trend_window: 168
+vol_window: 168
