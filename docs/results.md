@@ -283,6 +283,49 @@ Interpretation: core exposure is the best aggregate variant so far and materiall
 improves XRP, but it does not fix SOL and does not improve positive-symbol
 breadth. It remains a research candidate, not a paper-trading candidate.
 
+## Filtered Crypto3 Universe
+
+After diagnosing SOL and XRP as persistent holdout weaknesses, we tested a
+filtered universe containing only:
+
+- `BTCUSDT`
+- `ETHUSDT`
+- `BNBUSDT`
+
+This is a universe-selection decision, so it must be treated carefully. It is
+valid for defining a narrower research universe, but it is not evidence that the
+strategy generalizes to all liquid crypto pairs.
+
+Purified selection on `2021-2023` again selected:
+
+- participation mode: `always`
+- participation floor: `0.20`
+- short/long windows: `24 / 336`
+- realized volatility window: `120`
+- target hourly volatility: `0.008`
+- trailing stop: `0.15`
+
+Crypto3 holdout result on `2024`:
+
+| Policy | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| buy_and_hold | 94.58% | 48.95% | 40.54% | 46.66% | 3 / 3 |
+| selected_trend_risk | 43.63% | 34.71% | 12.48% | 12.86% | 3 / 3 |
+| cash | 0.00% | 0.00% | 0.00% | 0.00% | 0 / 3 |
+
+Symbol result:
+
+| Symbol | Strategy Return | Benchmark Return | Max Drawdown |
+| --- | ---: | ---: | ---: |
+| BTCUSDT | 49.95% | 115.04% | 12.48% |
+| ETHUSDT | 34.71% | 49.17% | 12.86% |
+| BNBUSDT | 46.21% | 120.41% | 12.09% |
+
+Interpretation: the filtered BTC/ETH/BNB universe is the strongest current
+research candidate. It clears the immediate holdout breadth issue with `3 / 3`
+positive symbols and controlled drawdown. It is still not live-ready until it
+passes stricter final holdout, longer-history, and execution-readiness checks.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -409,6 +452,12 @@ Run core exposure tune/test:
 
 ```bash
 make tune-test-core-exposure
+```
+
+Run filtered crypto3 core exposure tune/test:
+
+```bash
+make tune-test-core-exposure-crypto3
 ```
 
 Run failure diagnostics:

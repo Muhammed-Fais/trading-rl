@@ -42,6 +42,7 @@ make calendar-holdout
 make tune-test
 make tune-test-participation
 make tune-test-core-exposure
+make tune-test-core-exposure-crypto3
 make failure-diagnostics
 ```
 
@@ -154,6 +155,7 @@ make calendar-holdout
 make tune-test
 make tune-test-participation
 make tune-test-core-exposure
+make tune-test-core-exposure-crypto3
 make failure-diagnostics
 ```
 
