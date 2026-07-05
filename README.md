@@ -29,6 +29,15 @@ versions:
 uv sync --extra dev --extra rllib
 ```
 
+Common workflows are also available through `make`:
+
+```bash
+make check
+make mlflow
+make sweep
+make multi-sweep
+```
+
 ## Download Data
 
 ```bash
@@ -106,6 +115,9 @@ uv run trading-rl-multi-symbol-sweep --config configs/sweeps/btc_eth_1h.yaml
 This is a robustness check, not a guarantee. A candidate is more interesting
 when it keeps positive mean walk-forward return across symbols using the same
 parameters.
+
+See `docs/results.md` for the current BTC/ETH sweep results and research
+conclusions.
 
 You can also generate a baseline report without training:
 
