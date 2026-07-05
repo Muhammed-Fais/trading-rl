@@ -51,10 +51,16 @@ uv run trading-rl-train-rllib --config configs/train/ppo.yaml
 Training logs to MLflow by default:
 
 ```bash
-uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
+uv run mlflow ui \
+  --backend-store-uri sqlite:////Users/fais/Desktop/My_projects/RL/mlflow.db \
+  --host 127.0.0.1 \
+  --port 5001
 ```
 
-Then open `http://127.0.0.1:5000`.
+Then open `http://127.0.0.1:5001`.
+
+Use the absolute SQLite URI so the dashboard reads this repo's `mlflow.db`.
+Port `5000` may be occupied by macOS services on some machines.
 
 Each run logs parameters, training metrics, checkpoints, evaluation metrics, and
 an HTML trading report artifact with:
