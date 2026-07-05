@@ -30,6 +30,7 @@ def run_trend_risk_grid(
     rows: list[dict[str, Any]] = []
     symbol_data = _load_symbol_data(config)
     policy_grid = list(_grid_params(config["grid"]))
+    active_exposure_threshold = config.get("active_exposure_threshold")
     if max_policies is not None:
         policy_grid = policy_grid[:max_policies]
 
@@ -52,13 +53,19 @@ def run_trend_risk_grid(
             max_start = len(probe_env.df) - int(wf["test_size"]) - 1
             while start <= max_start:
                 env = build_env_from_dataframe(df, dict(env_config))
-                _, metrics = evaluate_policy(
+                history, metrics = evaluate_policy(
                     env,
                     trend_risk_policy(**params),
                     start_index=start,
                     max_steps=int(wf["test_size"]),
                     seed=fold,
                 )
+                activity = {}
+                if active_exposure_threshold is not None:
+                    activity["active_step_ratio"] = _active_step_ratio(
+                        history,
+                        float(active_exposure_threshold),
+                    )
                 rows.append(
                     {
                         "policy": policy_name,
@@ -68,6 +75,7 @@ def run_trend_risk_grid(
                         "end_step": start + int(wf["test_size"]),
                         **params,
                         **metrics.as_dict(),
+                        **activity,
                     }
                 )
                 fold += 1
@@ -123,6 +131,13 @@ def _grid_params(grid: dict[str, list[Any]]):
         params = dict(zip(keys, values, strict=True))
         name = f"trend_risk_grid_{index:03d}"
         yield name, params
+
+
+def _active_step_ratio(history: pd.DataFrame, threshold: float) -> float:
+    if history.empty or "position_fraction" not in history.columns:
+        return 0.0
+    active = history["position_fraction"].abs() >= threshold
+    return float(active.mean())
 
 
 def main() -> None:

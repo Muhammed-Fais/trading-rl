@@ -1,0 +1,10 @@
+metrics_path: artifacts/tune_test/activity_crypto3_2021_2024/portfolio_report/portfolio_metrics.csv
+output_dir: artifacts/tune_test/activity_crypto3_2021_2024/portfolio_report
+
+criteria:
+  min_total_return: 0.20
+  max_drawdown: 0.20
+  min_active_month_ratio: 0.60
+  min_active_months: 8
+  max_inactive_months: 4
+  min_sharpe: 1.0

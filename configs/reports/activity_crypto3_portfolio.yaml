@@ -1,0 +1,9 @@
+history_root: artifacts/tune_test/activity_crypto3_2021_2024/holdout
+output_dir: artifacts/tune_test/activity_crypto3_2021_2024/portfolio_report
+policy: selected_trend_risk
+active_exposure_threshold: 0.05
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+  - BNBUSDT
+title: BTC/ETH/BNB activity candidate 2024 holdout portfolio

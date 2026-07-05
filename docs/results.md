@@ -408,6 +408,55 @@ choosing to lock gains after the March drawdown. To trade throughout the year,
 we need a new objective/gate that explicitly rewards continued participation,
 not just return/drawdown robustness.
 
+## Activity-Aware Selection Test
+
+The tune/test workflow now supports activity-aware selection. When enabled, the
+selection grid records `active_step_ratio` from each fold and adds cross-symbol
+activity metrics to the ranking:
+
+- `mean_active_step_ratio`
+- `min_symbol_active_step_ratio`
+- `selection_score`
+
+The first activity-focused crypto3 experiment used the same purified split:
+
+- selection: `2021-01-01` through `2023-12-31`
+- holdout: `2024-01-01` through `2024-12-31`
+- activity threshold: `5%` average exposure
+- target selection activity: at least `60%` active steps
+
+The most active candidates reached roughly `63%` mean active steps, but they had
+negative mean selection return and only `1 / 3` positive symbols. The profitable
+`3 / 3` positive-symbol family reached only about `39%` active steps during
+selection.
+
+The activity-aware selector therefore still selected the same core-exposure
+candidate:
+
+| Policy | Selection Return | Selection Active Steps | Holdout Return | Holdout Max DD | Holdout Active Months |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| trend_risk_grid_019 | 2.82% | 39.15% | 43.63% | 11.83% | 3 / 12 |
+
+The generated activity-candidate report is:
+
+`artifacts/tune_test/activity_crypto3_2021_2024/portfolio_report/portfolio_report.html`
+
+Its portfolio gates still fail activity:
+
+| Gate | Value | Required | Pass |
+| --- | ---: | ---: | --- |
+| total_return | 43.63% | >= 20.00% | yes |
+| max_drawdown | 11.83% | <= 20.00% | yes |
+| active_month_ratio | 25.00% | >= 60.00% | no |
+| active_months | 3 | >= 8 | no |
+| inactive_months | 9 | <= 4 | no |
+| sharpe | 2.11 | >= 1.00 | yes |
+
+Interpretation: the problem is no longer just selection scoring. Within this
+parameter family, the policies that stay active enough are not profitable or
+broad enough. The next research step should introduce a different re-entry or
+regime model rather than only increasing the activity weight.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not

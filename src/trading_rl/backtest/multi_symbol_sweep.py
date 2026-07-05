@@ -66,6 +66,19 @@ def rank_multi_symbol(summary: pd.DataFrame) -> pd.DataFrame:
     out = ranking.merge(per_symbol, on="policy")
     out = out.merge(positive_symbols, on="policy")
     out = out.merge(min_symbol_mean, on="policy")
+    if "active_step_ratio" in summary.columns:
+        mean_active = summary.groupby("policy")["active_step_ratio"].mean().rename(
+            "mean_active_step_ratio"
+        )
+        min_symbol_active = (
+            summary.groupby(["policy", "symbol"])["active_step_ratio"]
+            .mean()
+            .groupby("policy")
+            .min()
+            .rename("min_symbol_active_step_ratio")
+        )
+        out = out.merge(mean_active, on="policy")
+        out = out.merge(min_symbol_active, on="policy")
     out["robust_score"] = out["score"] + 0.05 * out["positive_symbols"] + out[
         "min_symbol_mean_return"
     ].clip(upper=0.0)

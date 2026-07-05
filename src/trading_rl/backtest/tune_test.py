@@ -26,12 +26,20 @@ def run_tune_test(
         "grid": config["grid"],
         "data_range": config["selection_period"],
     }
+    if "active_exposure_threshold" in config:
+        tuning_config["active_exposure_threshold"] = config["active_exposure_threshold"]
     _, tuning_ranking = run_trend_risk_grid(
         tuning_config,
         output / "selection",
         progress_every=int(config.get("progress_every", 25)),
     )
-    selected = _selected_trend_risk_params(tuning_ranking, list(config["grid"].keys()))
+    selection_ranking = _apply_selection_objective(
+        tuning_ranking,
+        config.get("selection_objective"),
+    )
+    if "selection_score" in selection_ranking.columns:
+        selection_ranking.to_csv(output / "selection" / "selection_ranking.csv", index=False)
+    selected = _selected_trend_risk_params(selection_ranking, list(config["grid"].keys()))
 
     holdout_config = {
         "symbols": config["symbols"],
@@ -50,9 +58,11 @@ def run_tune_test(
     selected_artifact = {
         "selection_period": config["selection_period"],
         "holdout": config["holdout"],
-        "selected_policy": str(tuning_ranking.iloc[0]["policy"]),
+        "selected_policy": str(selection_ranking.iloc[0]["policy"]),
         "selected_params": selected,
     }
+    if config.get("selection_objective") is not None:
+        selected_artifact["selection_objective"] = config["selection_objective"]
     (output / "selected_policy.json").write_text(
         json.dumps(selected_artifact, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -68,6 +78,65 @@ def _selected_trend_risk_params(
         raise ValueError("Cannot select trend-risk params from an empty ranking")
     row = ranking.iloc[0]
     return {key: _jsonable(row[key]) for key in param_keys}
+
+
+def _apply_selection_objective(
+    ranking: pd.DataFrame,
+    objective: dict[str, Any] | None,
+) -> pd.DataFrame:
+    if ranking.empty or objective is None:
+        return ranking
+
+    out = ranking.copy()
+    out = _filter_if_available(out, "positive_symbols", ">=", objective.get("min_positive_symbols"))
+    out = _filter_if_available(out, "max_drawdown", "<=", objective.get("max_mean_drawdown"))
+    out = _filter_if_available(
+        out,
+        "max_fold_drawdown",
+        "<=",
+        objective.get("max_max_fold_drawdown"),
+    )
+    out = _filter_if_available(
+        out,
+        "mean_active_step_ratio",
+        ">=",
+        objective.get("min_mean_active_step_ratio"),
+    )
+    out = _filter_if_available(
+        out,
+        "min_symbol_active_step_ratio",
+        ">=",
+        objective.get("min_symbol_active_step_ratio"),
+    )
+
+    base_score = str(objective.get("base_score", "robust_score"))
+    if base_score not in out.columns:
+        raise ValueError(f"Selection base score column not found: {base_score}")
+    activity = (
+        out["mean_active_step_ratio"]
+        if "mean_active_step_ratio" in out.columns
+        else pd.Series(0.0, index=out.index)
+    )
+    activity_weight = float(objective.get("activity_weight", 0.0))
+    out["selection_score"] = out[base_score] + activity_weight * activity
+    return out.sort_values("selection_score", ascending=False).reset_index(drop=True)
+
+
+def _filter_if_available(
+    ranking: pd.DataFrame,
+    column: str,
+    operator: str,
+    threshold: Any,
+) -> pd.DataFrame:
+    if threshold is None or column not in ranking.columns:
+        return ranking
+    if operator == ">=":
+        filtered = ranking[ranking[column] >= float(threshold)]
+    elif operator == "<=":
+        filtered = ranking[ranking[column] <= float(threshold)]
+    else:
+        raise ValueError(f"Unsupported selection operator: {operator}")
+    return filtered if not filtered.empty else ranking
 
 
 def _jsonable(value: Any) -> Any:

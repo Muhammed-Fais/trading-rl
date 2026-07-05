@@ -41,3 +41,31 @@ def test_rank_multi_symbol_rewards_cross_asset_robustness() -> None:
 
     assert {"symbols_tested", "positive_symbols", "robust_score"}.issubset(ranking.columns)
     assert ranking.loc[ranking["policy"] == "robust", "positive_symbols"].iloc[0] == 2
+
+
+def test_rank_multi_symbol_includes_activity_when_available() -> None:
+    summary = pd.DataFrame(
+        [
+            {
+                "symbol": "BTCUSDT",
+                "policy": "active",
+                "total_return": 0.05,
+                "max_drawdown": 0.1,
+                "average_turnover": 0.01,
+                "active_step_ratio": 0.8,
+            },
+            {
+                "symbol": "ETHUSDT",
+                "policy": "active",
+                "total_return": 0.04,
+                "max_drawdown": 0.1,
+                "average_turnover": 0.01,
+                "active_step_ratio": 0.6,
+            },
+        ]
+    )
+
+    ranking = rank_multi_symbol(summary)
+
+    assert ranking.loc[0, "mean_active_step_ratio"] == 0.7
+    assert ranking.loc[0, "min_symbol_active_step_ratio"] == 0.6
