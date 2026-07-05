@@ -66,3 +66,35 @@ def test_risk_overlay_cannot_exceed_base_policy_target() -> None:
     _, _, _, _, info = wrapped.step(np.array([1.0], dtype=np.float32))
 
     assert info["effective_target_fraction"] == pytest.approx(0.25)
+
+
+def test_risk_overlay_rewards_upside_participation() -> None:
+    env = SpotTradingEnv(
+        _df(),
+        SpotTradingConfig(
+            action_mode="continuous",
+            lookback=8,
+            split="all",
+            random_start=False,
+            episode_length=8,
+        ),
+    )
+    wrapped = RiskOverlayTradingEnv(
+        env,
+        base_policy=lambda _obs, _info: np.array([0.8], dtype=np.float32),
+        overlay_reward_config={
+            "upside_participation_weight": 1.0,
+            "upside_underuse_penalty": 0.5,
+            "min_base_target_for_bonus": 0.05,
+        },
+    )
+
+    wrapped.reset(seed=7)
+    _, reward_high, _, _, info_high = wrapped.step(np.array([1.0], dtype=np.float32))
+
+    wrapped.reset(seed=7)
+    _, reward_low, _, _, info_low = wrapped.step(np.array([0.0], dtype=np.float32))
+
+    assert reward_high > reward_low
+    assert info_high["reward_components"]["overlay_upside_participation"] > 0.0
+    assert info_low["reward_components"]["overlay_upside_underuse"] < 0.0

@@ -171,6 +171,7 @@ def rllib_policy(algo: Any) -> PolicyFn:
 def build_env_from_config(env_config: dict[str, Any]) -> SpotTradingEnv:
     env_type = str(env_config.pop("env_type", "spot"))
     base_policy_config = env_config.pop("base_policy_config", None)
+    overlay_reward_config = env_config.pop("overlay_reward", None)
     data_path = str(Path(env_config.pop("data_path")).expanduser().resolve())
     df = pd.read_parquet(data_path)
     env = build_env_from_dataframe(df, env_config)
@@ -179,7 +180,11 @@ def build_env_from_config(env_config: dict[str, Any]) -> SpotTradingEnv:
     if env_type == "risk_overlay":
         from trading_rl.envs.risk_overlay_env import RiskOverlayTradingEnv
 
-        return RiskOverlayTradingEnv(env, base_policy_config=base_policy_config)
+        return RiskOverlayTradingEnv(
+            env,
+            base_policy_config=base_policy_config,
+            overlay_reward_config=overlay_reward_config,
+        )
     raise ValueError("env_type must be one of: spot, risk_overlay")
 
 

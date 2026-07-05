@@ -559,11 +559,30 @@ The v1 report is:
 
 `artifacts/reports/btcusdt_ppo_overlay_v1.html`
 
+The v2 run added overlay-specific reward shaping: when the base risk policy has
+exposure available and the market moves up, the agent receives a small reward
+for using the cap and a penalty for leaving it unused. This is meant to counter
+the v1 behavior of hiding in near-cash.
+
+`configs/train/ppo_overlay_btc_v2.yaml`
+
+Held-out test performance improved slightly, but remains negative:
+
+| Policy | Return | Benchmark Return | Max Drawdown | Average Exposure |
+| --- | ---: | ---: | ---: | ---: |
+| PPO overlay v1 | -4.82% | -8.83% | 4.88% | 4.91% |
+| PPO overlay v2 | -4.20% | -8.83% | 4.59% | 4.47% |
+
+The v2 report is:
+
+`artifacts/reports/btcusdt_ppo_overlay_v2.html`
+
 Interpretation: this is not a trading candidate. It proves the RL overlay
-plumbing works, and v1 shows the agent is learning to stay very conservative
-inside the risk cap. Next RL work should train longer with a reward/objective
-that explicitly values useful participation, then evaluate across the same
-purified holdout workflow and portfolio gates.
+plumbing works. V2 is a small improvement over v1, but the agent is still too
+conservative and still loses money in the held-out test. Next RL work should
+increase useful participation without allowing drawdown to escape the hard risk
+cap, then evaluate across the same purified holdout workflow and portfolio
+gates.
 
 Current direction:
 
