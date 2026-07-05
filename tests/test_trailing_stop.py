@@ -50,6 +50,7 @@ def test_momentum_participation_requires_positive_momentum() -> None:
         prices=[100.0, 103.0, 108.0],
         short_ma=104.0,
         participation_floor=0.25,
+        participation_mode="momentum",
         momentum_window=2,
         momentum_threshold=0.05,
         max_exposure=1.0,
@@ -63,9 +64,24 @@ def test_momentum_participation_stays_off_without_floor() -> None:
         prices=[100.0, 103.0, 108.0],
         short_ma=104.0,
         participation_floor=0.0,
+        participation_mode="momentum",
         momentum_window=2,
         momentum_threshold=0.05,
         max_exposure=1.0,
     )
 
     assert exposure == pytest.approx(0.0)
+
+
+def test_always_participation_uses_floor_without_momentum_condition() -> None:
+    exposure = _momentum_participation_exposure(
+        prices=[100.0],
+        short_ma=120.0,
+        participation_floor=0.25,
+        participation_mode="always",
+        momentum_window=72,
+        momentum_threshold=0.05,
+        max_exposure=0.20,
+    )
+
+    assert exposure == pytest.approx(0.20)

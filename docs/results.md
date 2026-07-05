@@ -246,6 +246,43 @@ does not repair XRP or improve positive-symbol breadth. The next candidate
 should use a stronger regime-aware participation model, not just a small
 momentum floor.
 
+## Core Exposure Test
+
+The next participation variant keeps a small protected exposure floor when the
+full trend filter is off. This is closer to a core/satellite approach: the
+system can hold a small beta allocation for upside participation while the
+original trend-risk layer still controls larger exposure, drawdown exits,
+trailing stops, and cooldowns.
+
+Purified selection on `2021-2023` chose:
+
+- participation mode: `always`
+- participation floor: `0.20`
+- target hourly volatility: `0.008`
+- short/long windows: `24 / 336`
+- realized volatility window: `120`
+
+Holdout result:
+
+| Policy | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline | 23.77% | -5.86% | 12.31% | 12.51% | 3 / 5 |
+| core_exposure | 24.80% | -6.22% | 12.55% | 12.93% | 3 / 5 |
+
+Symbol impact:
+
+| Symbol | Baseline Return | Core Exposure Return |
+| --- | ---: | ---: |
+| BTCUSDT | 50.07% | 49.95% |
+| ETHUSDT | 35.06% | 34.71% |
+| BNBUSDT | 41.95% | 46.21% |
+| SOLUSDT | -5.86% | -6.22% |
+| XRPUSDT | -2.37% | -0.64% |
+
+Interpretation: core exposure is the best aggregate variant so far and materially
+improves XRP, but it does not fix SOL and does not improve positive-symbol
+breadth. It remains a research candidate, not a paper-trading candidate.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -366,6 +403,12 @@ Run participation tune/test:
 
 ```bash
 make tune-test-participation
+```
+
+Run core exposure tune/test:
+
+```bash
+make tune-test-core-exposure
 ```
 
 Run failure diagnostics:

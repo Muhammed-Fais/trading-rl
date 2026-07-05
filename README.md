@@ -41,6 +41,7 @@ make promotion-gates
 make calendar-holdout
 make tune-test
 make tune-test-participation
+make tune-test-core-exposure
 make failure-diagnostics
 ```
 
@@ -152,6 +153,7 @@ make trend-grid-adaptive-crypto5
 make calendar-holdout
 make tune-test
 make tune-test-participation
+make tune-test-core-exposure
 make failure-diagnostics
 ```
 

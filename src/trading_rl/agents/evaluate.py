@@ -105,6 +105,7 @@ def trend_risk_policy(
     min_trailing_stop: float = 0.06,
     max_trailing_stop: float = 0.20,
     participation_floor: float = 0.0,
+    participation_mode: str = "momentum",
     momentum_window: int = 72,
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
@@ -123,6 +124,7 @@ def trend_risk_policy(
         min_trailing_stop=min_trailing_stop,
         max_trailing_stop=max_trailing_stop,
         participation_floor=participation_floor,
+        participation_mode=participation_mode,
         momentum_window=momentum_window,
         momentum_threshold=momentum_threshold,
         cooldown_steps=cooldown_steps,
@@ -329,6 +331,7 @@ def _trend_risk_policy(
     min_trailing_stop: float = 0.06,
     max_trailing_stop: float = 0.20,
     participation_floor: float = 0.0,
+    participation_mode: str = "momentum",
     momentum_window: int = 72,
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
@@ -342,6 +345,8 @@ def _trend_risk_policy(
     invested = False
     if trailing_stop_mode not in {"percent", "atr"}:
         raise ValueError("trailing_stop_mode must be one of: percent, atr")
+    if participation_mode not in {"momentum", "always"}:
+        raise ValueError("participation_mode must be one of: momentum, always")
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
         nonlocal portfolio_peak, entry_peak, cooldown, invested
@@ -380,6 +385,7 @@ def _trend_risk_policy(
                 prices=prices,
                 short_ma=short_ma,
                 participation_floor=participation_floor,
+                participation_mode=participation_mode,
                 momentum_window=momentum_window,
                 momentum_threshold=momentum_threshold,
                 max_exposure=max_exposure,
@@ -425,11 +431,16 @@ def _momentum_participation_exposure(
     prices: list[float],
     short_ma: float,
     participation_floor: float,
+    participation_mode: str,
     momentum_window: int,
     momentum_threshold: float,
     max_exposure: float,
 ) -> float:
-    if participation_floor <= 0.0 or len(prices) <= momentum_window:
+    if participation_floor <= 0.0:
+        return 0.0
+    if participation_mode == "always":
+        return float(np.clip(participation_floor, 0.0, max_exposure))
+    if len(prices) <= momentum_window:
         return 0.0
     price = prices[-1]
     base_price = prices[-momentum_window - 1]
