@@ -9,9 +9,10 @@ TREND_GRID_ADAPTIVE_CRYPTO5_CONFIG ?= configs/sweeps/trend_risk_grid_adaptive_cr
 TREND_GRID_CONFIG ?= configs/sweeps/trend_risk_grid_btc_eth.yaml
 PROMOTION_GATES_CONFIG ?= configs/sweeps/promotion_gates.yaml
 CALENDAR_HOLDOUT_CONFIG ?= configs/sweeps/calendar_holdout_crypto5.yaml
+TUNE_TEST_CONFIG ?= configs/sweeps/tune_test_crypto5_2021_2024.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test train
 
 install:
 	uv sync --extra dev
@@ -120,6 +121,11 @@ calendar-holdout:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.calendar_holdout \
 		--config $(CALENDAR_HOLDOUT_CONFIG) \
 		--output-dir artifacts/holdout/calendar_crypto5
+
+tune-test:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.tune_test \
+		--config $(TUNE_TEST_CONFIG) \
+		--output-dir artifacts/tune_test/crypto5_2021_2024
 
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \

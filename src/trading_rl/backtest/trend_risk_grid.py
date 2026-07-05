@@ -12,6 +12,7 @@ from trading_rl.agents.evaluate import (
     evaluate_policy,
     trend_risk_policy,
 )
+from trading_rl.backtest.calendar_holdout import filter_calendar_range
 from trading_rl.backtest.multi_symbol_sweep import rank_multi_symbol
 from trading_rl.utils.config import load_yaml
 
@@ -87,9 +88,13 @@ def run_trend_risk_grid(
 
 def _load_symbol_data(config: dict[str, Any]) -> dict[str, pd.DataFrame]:
     data: dict[str, pd.DataFrame] = {}
+    data_range = config.get("data_range")
     for symbol, symbol_cfg in config["symbols"].items():
         data_path = Path(symbol_cfg["data_path"]).expanduser().resolve()
-        data[symbol] = pd.read_parquet(data_path)
+        df = pd.read_parquet(data_path)
+        if data_range is not None:
+            df = filter_calendar_range(df, data_range["start"], data_range["end"])
+        data[symbol] = df
     return data
 
 

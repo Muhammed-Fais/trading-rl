@@ -36,6 +36,7 @@ trading-rl-multi-symbol-sweep = "trading_rl.backtest.multi_symbol_sweep:main"
 trading-rl-trend-risk-grid = "trading_rl.backtest.trend_risk_grid:main"
 trading-rl-promotion-gates = "trading_rl.backtest.promotion_gates:main"
 trading-rl-calendar-holdout = "trading_rl.backtest.calendar_holdout:main"
+trading-rl-tune-test = "trading_rl.backtest.tune_test:main"
 
 [build-system]
 requires = ["hatchling"]

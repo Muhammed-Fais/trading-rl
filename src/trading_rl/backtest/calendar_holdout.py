@@ -26,7 +26,7 @@ def run_calendar_holdout(
 
     for symbol, symbol_cfg in config["symbols"].items():
         raw = pd.read_parquet(Path(symbol_cfg["data_path"]).expanduser())
-        df = _filter_holdout(raw, holdout["start"], holdout["end"])
+        df = filter_calendar_range(raw, holdout["start"], holdout["end"])
         env_config = dict(config["base_env_config"])
         env_config["split"] = "all"
         env_config["random_start"] = False
@@ -51,9 +51,9 @@ def run_calendar_holdout(
     return summary, ranking
 
 
-def _filter_holdout(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
+def filter_calendar_range(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
     if "open_time" not in df.columns:
-        raise ValueError("Calendar holdout requires an open_time column")
+        raise ValueError("Calendar filtering requires an open_time column")
     timestamps = pd.to_datetime(df["open_time"], utc=True)
     start_ts = pd.Timestamp(start, tz="UTC")
     end_ts = pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
@@ -61,6 +61,10 @@ def _filter_holdout(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
     if out.empty:
         raise ValueError(f"No rows found for holdout range {start} to {end}")
     return out
+
+
+def _filter_holdout(df: pd.DataFrame, start: str, end: str) -> pd.DataFrame:
+    return filter_calendar_range(df, start, end)
 
 
 def _policy_from_config(policy_cfg: dict[str, Any]):

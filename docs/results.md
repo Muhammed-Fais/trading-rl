@@ -145,6 +145,44 @@ This is only a diagnostic because previous grids already used data through
 `2024-12-31`. The machinery is now in place, but a true final holdout must use
 data that was not used during parameter selection.
 
+## Purified Tune/Test Result
+
+The first date-purified workflow selects trend-risk parameters using only
+`2021-01-01` through `2023-12-31`, then evaluates the selected policy on
+`2024-01-01` through `2024-12-31`.
+
+From `artifacts/tune_test/crypto5_2021_2024/selection/trend_risk_grid_ranking.csv`,
+the selected parameters are:
+
+- short window: `24`
+- long window: `336`
+- realized volatility window: `120`
+- target hourly volatility: `0.008`
+- max portfolio drawdown guard: `0.12`
+- trailing stop: `0.15`
+- cooldown: `48`
+- max exposure: `1.0`
+
+Selection-period result:
+
+| Policy | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Win Rate | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| trend_risk_grid_007 | 4.31% | -12.76% | 12.18% | 13.59% | 57.50% | 5 / 5 |
+
+Holdout result from
+`artifacts/tune_test/crypto5_2021_2024/holdout/calendar_holdout_ranking.csv`:
+
+| Policy | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| buy_and_hold | 125.37% | 48.95% | 42.78% | 46.66% | 5 / 5 |
+| selected_trend_risk | 23.77% | -5.86% | 12.31% | 12.51% | 3 / 5 |
+| cash | 0.00% | 0.00% | 0.00% | 0.00% | 0 / 5 |
+
+Interpretation: the selected parameters are stable enough to be chosen without
+looking at `2024`, but the holdout still weakens from `5 / 5` positive symbols
+in selection to `3 / 5` in `2024`. That blocks paper trading and points to
+regime and per-symbol failure diagnostics as the next research step.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -253,4 +291,10 @@ Run calendar holdout diagnostic:
 
 ```bash
 make calendar-holdout
+```
+
+Run purified tune/test:
+
+```bash
+make tune-test
 ```
