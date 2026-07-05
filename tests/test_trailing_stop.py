@@ -3,6 +3,7 @@ import pytest
 from trading_rl.agents.evaluate import (
     _active_trailing_stop,
     _momentum_participation_exposure,
+    _recovery_reentry_exposure,
     trend_risk_policy,
 )
 
@@ -121,3 +122,54 @@ def test_drawdown_cooldown_reset_allows_reentry_after_risk_stop() -> None:
         )
 
     assert float(actions[-1][0]) > 0.0
+
+
+def test_recovery_reentry_requires_momentum_and_trend_confirmation() -> None:
+    exposure = _recovery_reentry_exposure(
+        prices=[100.0, 103.0, 108.0],
+        short_ma=105.0,
+        long_ma=102.0,
+        mode="momentum",
+        exposure=0.2,
+        momentum_window=2,
+        momentum_threshold=0.05,
+        max_exposure=1.0,
+    )
+
+    assert exposure == pytest.approx(0.2)
+
+
+def test_recovery_reentry_allows_capped_reentry_after_drawdown_stop() -> None:
+    policy = trend_risk_policy(
+        short_window=2,
+        long_window=3,
+        realized_window=3,
+        max_portfolio_drawdown=0.10,
+        participation_floor=0.2,
+        participation_mode="always",
+        cooldown_steps=2,
+        recovery_reentry_mode="momentum",
+        recovery_exposure=0.15,
+        recovery_momentum_window=2,
+        recovery_momentum_threshold=0.01,
+        recovery_drawdown_buffer=0.05,
+    )
+    prices = [100.0, 101.0, 102.0, 103.0, 104.0, 106.0, 109.0]
+    values = [10000.0, 11500.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    actions = []
+
+    for price, value in zip(prices, values, strict=True):
+        actions.append(
+            policy(
+                _obs=None,
+                info={
+                    "price": price,
+                    "high": price,
+                    "low": price,
+                    "portfolio_value": value,
+                    "action_mode": "continuous",
+                },
+            )
+        )
+
+    assert float(actions[-1][0]) == pytest.approx(0.15)

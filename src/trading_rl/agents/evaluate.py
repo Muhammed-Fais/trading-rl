@@ -110,6 +110,11 @@ def trend_risk_policy(
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
     reset_peak_after_drawdown: bool = False,
+    recovery_reentry_mode: str = "off",
+    recovery_exposure: float = 0.2,
+    recovery_momentum_window: int = 72,
+    recovery_momentum_threshold: float = 0.05,
+    recovery_drawdown_buffer: float = 0.03,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     return _trend_risk_policy(
@@ -130,6 +135,11 @@ def trend_risk_policy(
         momentum_threshold=momentum_threshold,
         cooldown_steps=cooldown_steps,
         reset_peak_after_drawdown=reset_peak_after_drawdown,
+        recovery_reentry_mode=recovery_reentry_mode,
+        recovery_exposure=recovery_exposure,
+        recovery_momentum_window=recovery_momentum_window,
+        recovery_momentum_threshold=recovery_momentum_threshold,
+        recovery_drawdown_buffer=recovery_drawdown_buffer,
         max_exposure=max_exposure,
     )
 
@@ -338,6 +348,11 @@ def _trend_risk_policy(
     momentum_threshold: float = 0.08,
     cooldown_steps: int = 48,
     reset_peak_after_drawdown: bool = False,
+    recovery_reentry_mode: str = "off",
+    recovery_exposure: float = 0.2,
+    recovery_momentum_window: int = 72,
+    recovery_momentum_threshold: float = 0.05,
+    recovery_drawdown_buffer: float = 0.03,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     prices: list[float] = []
@@ -346,14 +361,19 @@ def _trend_risk_policy(
     entry_peak = 0.0
     cooldown = 0
     cooldown_reason = ""
+    risk_off = False
+    recovery_mode = False
     invested = False
     if trailing_stop_mode not in {"percent", "atr"}:
         raise ValueError("trailing_stop_mode must be one of: percent, atr")
     if participation_mode not in {"momentum", "always"}:
         raise ValueError("participation_mode must be one of: momentum, always")
+    if recovery_reentry_mode not in {"off", "momentum"}:
+        raise ValueError("recovery_reentry_mode must be one of: off, momentum")
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
         nonlocal portfolio_peak, entry_peak, cooldown, cooldown_reason, invested
+        nonlocal recovery_mode, risk_off
         price = float(info["price"])
         previous_price = prices[-1] if prices else price
         high = float(info.get("high", price))
@@ -373,6 +393,8 @@ def _trend_risk_policy(
             ):
                 portfolio_peak = portfolio_value
                 entry_peak = price
+                risk_off = False
+                recovery_mode = False
                 cooldown_reason = ""
             invested = False
             return _target_action(info, 0.0)
@@ -380,18 +402,19 @@ def _trend_risk_policy(
         if len(prices) < max(long_window, realized_window) + 1:
             return _target_action(info, 0.0)
 
-        portfolio_drawdown = (
-            0.0 if portfolio_peak <= 0.0 else 1.0 - portfolio_value / portfolio_peak
-        )
-        if portfolio_drawdown > max_portfolio_drawdown:
-            cooldown = cooldown_steps
-            cooldown_reason = "portfolio_drawdown"
-            invested = False
-            return _target_action(info, 0.0)
-
         short_ma = float(np.mean(prices[-short_window:]))
         long_ma = float(np.mean(prices[-long_window:]))
         trend_on = short_ma > long_ma and price > long_ma
+        recovery_exposure_value = _recovery_reentry_exposure(
+            prices=prices,
+            short_ma=short_ma,
+            long_ma=long_ma,
+            mode=recovery_reentry_mode,
+            exposure=recovery_exposure,
+            momentum_window=recovery_momentum_window,
+            momentum_threshold=recovery_momentum_threshold,
+            max_exposure=max_exposure,
+        )
         participation_exposure = 0.0
         if not trend_on:
             participation_exposure = _momentum_participation_exposure(
@@ -403,38 +426,65 @@ def _trend_risk_policy(
                 momentum_threshold=momentum_threshold,
                 max_exposure=max_exposure,
             )
-        if not trend_on and participation_exposure <= 0.0:
-            invested = False
-            return _target_action(info, 0.0)
 
-        if not invested:
-            invested = True
-            entry_peak = price
-        entry_peak = max(entry_peak, price)
-        price_drawdown = 0.0 if entry_peak <= 0.0 else 1.0 - price / entry_peak
-        active_trailing_stop = _active_trailing_stop(
-            mode=trailing_stop_mode,
-            trailing_stop=trailing_stop,
-            true_ranges=true_ranges,
-            atr_window=atr_window,
-            atr_multiplier=atr_multiplier,
-            min_trailing_stop=min_trailing_stop,
-            max_trailing_stop=max_trailing_stop,
+        portfolio_drawdown = (
+            0.0 if portfolio_peak <= 0.0 else 1.0 - portfolio_value / portfolio_peak
         )
-        if price_drawdown > active_trailing_stop:
-            cooldown = cooldown_steps
-            cooldown_reason = "trailing_stop"
+        recovery_allowed = risk_off and recovery_exposure_value > 0.0
+        if portfolio_drawdown > max_portfolio_drawdown:
+            if not recovery_allowed:
+                cooldown = cooldown_steps
+                cooldown_reason = "portfolio_drawdown"
+                risk_off = True
+                recovery_mode = False
+                invested = False
+                return _target_action(info, 0.0)
+            recovery_mode = True
+            if portfolio_drawdown > max_portfolio_drawdown + recovery_drawdown_buffer:
+                cooldown = cooldown_steps
+                cooldown_reason = "portfolio_drawdown"
+                recovery_mode = False
+                invested = False
+                return _target_action(info, 0.0)
+        elif risk_off:
+            risk_off = False
+            recovery_mode = False
+
+        if not trend_on and participation_exposure <= 0.0 and recovery_exposure_value <= 0.0:
             invested = False
             return _target_action(info, 0.0)
 
-        log_returns = np.diff(np.log(np.asarray(prices[-realized_window:])))
-        realized_vol = float(np.std(log_returns, ddof=1))
-        if realized_vol <= 0.0:
-            exposure = max_exposure
+        if recovery_mode:
+            exposure = recovery_exposure_value
         else:
-            exposure = min(target_hourly_vol / realized_vol, max_exposure)
-        if participation_exposure > 0.0:
-            exposure = participation_exposure
+            if not invested:
+                invested = True
+                entry_peak = price
+            entry_peak = max(entry_peak, price)
+            price_drawdown = 0.0 if entry_peak <= 0.0 else 1.0 - price / entry_peak
+            active_trailing_stop = _active_trailing_stop(
+                mode=trailing_stop_mode,
+                trailing_stop=trailing_stop,
+                true_ranges=true_ranges,
+                atr_window=atr_window,
+                atr_multiplier=atr_multiplier,
+                min_trailing_stop=min_trailing_stop,
+                max_trailing_stop=max_trailing_stop,
+            )
+            if price_drawdown > active_trailing_stop:
+                cooldown = cooldown_steps
+                cooldown_reason = "trailing_stop"
+                invested = False
+                return _target_action(info, 0.0)
+
+            log_returns = np.diff(np.log(np.asarray(prices[-realized_window:])))
+            realized_vol = float(np.std(log_returns, ddof=1))
+            if realized_vol <= 0.0:
+                exposure = max_exposure
+            else:
+                exposure = min(target_hourly_vol / realized_vol, max_exposure)
+            if participation_exposure > 0.0:
+                exposure = participation_exposure
         return _target_action(info, exposure)
 
     return _policy
@@ -463,6 +513,30 @@ def _momentum_participation_exposure(
     momentum = price / base_price - 1.0
     if momentum >= momentum_threshold and price > short_ma:
         return float(np.clip(participation_floor, 0.0, max_exposure))
+    return 0.0
+
+
+def _recovery_reentry_exposure(
+    *,
+    prices: list[float],
+    short_ma: float,
+    long_ma: float,
+    mode: str,
+    exposure: float,
+    momentum_window: int,
+    momentum_threshold: float,
+    max_exposure: float,
+) -> float:
+    if mode == "off" or exposure <= 0.0 or len(prices) <= momentum_window:
+        return 0.0
+    price = prices[-1]
+    base_price = prices[-momentum_window - 1]
+    if base_price <= 0.0:
+        return 0.0
+    momentum = price / base_price - 1.0
+    trend_confirmed = price > short_ma > long_ma
+    if momentum >= momentum_threshold and trend_confirmed:
+        return float(np.clip(exposure, 0.0, max_exposure))
     return 0.0
 
 

@@ -371,6 +371,24 @@ Interpretation: simple re-entry after a drawdown stop is not acceptable. The nex
 research step should be a more selective re-entry rule, such as requiring a new
 regime confirmation or portfolio-level recovery signal before restoring risk.
 
+We then tested a controlled `recovery_reentry_mode=momentum` path. This keeps the
+old peak, allows only a small capped recovery exposure, and cuts risk again if
+drawdown worsens beyond a buffer. The purified selector still chose
+`recovery_reentry_mode=off`.
+
+Selection-period comparison:
+
+| Variant | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Robust Score |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| recovery off | 2.82% | -11.91% | 12.21% | 13.46% | 17.09% |
+| best recovery momentum | 2.79% | -11.91% | 12.24% | 13.46% | 17.03% |
+
+Interpretation: controlled recovery re-entry no longer blows up like naive peak
+reset, but it also does not beat the risk-off candidate. The current system is
+choosing to lock gains after the March drawdown. To trade throughout the year,
+we need a new objective/gate that explicitly rewards continued participation,
+not just return/drawdown robustness.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
