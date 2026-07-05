@@ -14,9 +14,10 @@ TUNE_TEST_PARTICIPATION_CONFIG ?= configs/sweeps/tune_test_participation_crypto5
 TUNE_TEST_CORE_EXPOSURE_CONFIG ?= configs/sweeps/tune_test_core_exposure_crypto5_2021_2024.yaml
 TUNE_TEST_CORE_EXPOSURE_CRYPTO3_CONFIG ?= configs/sweeps/tune_test_core_exposure_crypto3_2021_2024.yaml
 FAILURE_DIAGNOSTICS_CONFIG ?= configs/sweeps/failure_diagnostics_crypto5.yaml
+PORTFOLIO_REPORT_CONFIG ?= configs/reports/core_exposure_crypto3_portfolio.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 failure-diagnostics train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 failure-diagnostics portfolio-report train
 
 install:
 	uv sync --extra dev
@@ -149,6 +150,10 @@ tune-test-core-exposure-crypto3:
 failure-diagnostics:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.failure_diagnostics \
 		--config $(FAILURE_DIAGNOSTICS_CONFIG)
+
+portfolio-report:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.portfolio_report \
+		--config $(PORTFOLIO_REPORT_CONFIG)
 
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \

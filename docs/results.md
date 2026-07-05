@@ -326,6 +326,34 @@ research candidate. It clears the immediate holdout breadth issue with `3 / 3`
 positive symbols and controlled drawdown. It is still not live-ready until it
 passes stricter final holdout, longer-history, and execution-readiness checks.
 
+## Combined Crypto3 Portfolio Report
+
+From
+`artifacts/tune_test/core_exposure_crypto3_2021_2024/portfolio_report/portfolio_metrics.csv`,
+the equal-weight combined BTC/ETH/BNB strategy portfolio produced:
+
+| Portfolio | Return | Benchmark Return | Max Drawdown | Sharpe | Average Exposure |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| selected_trend_risk | 43.63% | 94.87% | 11.83% | 2.11 | 13.47% |
+
+The generated HTML report is:
+
+`artifacts/tune_test/core_exposure_crypto3_2021_2024/portfolio_report/portfolio_report.html`
+
+It includes:
+
+- combined equity curve
+- underwater drawdown
+- per-symbol equity contribution
+- exposure by symbol
+- monthly returns
+
+Interpretation: as one equal-weight portfolio, the filtered crypto3 strategy
+keeps drawdown controlled while capturing less than half of buy-and-hold upside
+in a strong crypto year. The strategy is risk-controlled, but the next research
+question is whether we can increase participation without losing the drawdown
+profile.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -464,4 +492,10 @@ Run failure diagnostics:
 
 ```bash
 make failure-diagnostics
+```
+
+Run combined portfolio report:
+
+```bash
+make portfolio-report
 ```

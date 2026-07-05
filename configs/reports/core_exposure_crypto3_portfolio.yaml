@@ -1,0 +1,8 @@
+history_root: artifacts/tune_test/core_exposure_crypto3_2021_2024/holdout
+output_dir: artifacts/tune_test/core_exposure_crypto3_2021_2024/portfolio_report
+policy: selected_trend_risk
+symbols:
+  - BTCUSDT
+  - ETHUSDT
+  - BNBUSDT
+title: BTC/ETH/BNB selected trend-risk 2024 holdout portfolio
