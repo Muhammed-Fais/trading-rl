@@ -81,6 +81,28 @@ def named_policy(name: str, seed: int = 7) -> PolicyFn:
     raise ValueError(f"Unknown policy: {name}")
 
 
+def trend_risk_policy(
+    short_window: int = 24,
+    long_window: int = 168,
+    realized_window: int = 72,
+    target_hourly_vol: float = 0.008,
+    max_portfolio_drawdown: float = 0.12,
+    trailing_stop: float = 0.15,
+    cooldown_steps: int = 48,
+    max_exposure: float = 1.0,
+) -> PolicyFn:
+    return _trend_risk_policy(
+        short_window=short_window,
+        long_window=long_window,
+        realized_window=realized_window,
+        target_hourly_vol=target_hourly_vol,
+        max_portfolio_drawdown=max_portfolio_drawdown,
+        trailing_stop=trailing_stop,
+        cooldown_steps=cooldown_steps,
+        max_exposure=max_exposure,
+    )
+
+
 def rllib_policy(algo: Any) -> PolicyFn:
     def _policy(obs: np.ndarray, _info: dict[str, Any]) -> PolicyAction:
         if hasattr(algo, "compute_single_action"):
@@ -96,6 +118,10 @@ def rllib_policy(algo: Any) -> PolicyFn:
 def build_env_from_config(env_config: dict[str, Any]) -> SpotTradingEnv:
     data_path = str(Path(env_config.pop("data_path")).expanduser().resolve())
     df = pd.read_parquet(data_path)
+    return build_env_from_dataframe(df, env_config)
+
+
+def build_env_from_dataframe(df: pd.DataFrame, env_config: dict[str, Any]) -> SpotTradingEnv:
     return SpotTradingEnv(df, SpotTradingConfig(**env_config))
 
 

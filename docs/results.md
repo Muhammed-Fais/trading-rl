@@ -39,6 +39,31 @@ Interpretation: buy-and-hold still wins on mean return, but `trend_risk_slow`
 has much smaller drawdowns and a far less severe worst fold. It is the current
 best risk-adjusted candidate.
 
+## Trend-Risk Parameter Grid
+
+From `artifacts/strategy_sweeps/trend_risk_grid_fast_btc_eth/trend_risk_grid_ranking.csv`:
+
+| Policy | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Mean Turnover | Win Rate | Robust Score |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| trend_risk_grid_015 | 4.71% | -12.12% | 12.09% | 13.27% | 0.62% | 58.33% | 14.43% |
+| trend_risk_grid_007 | 5.12% | -12.29% | 12.13% | 13.45% | 0.61% | 54.17% | 14.41% |
+| trend_risk_grid_005 | 4.87% | -12.43% | 12.17% | 13.45% | 0.60% | 54.17% | 14.14% |
+
+The top grid member matches the existing `trend_risk_slow` parameters:
+
+- short window: `48`
+- long window: `336`
+- realized volatility window: `120`
+- target hourly volatility: `0.008`
+- max portfolio drawdown guard: `0.12`
+- trailing stop: `0.15`
+- cooldown: `48`
+- max exposure: `1.0`
+
+Interpretation: the initial fast grid did not find a materially better setting.
+That is useful because the current candidate remains strongest when compared
+against nearby alternatives using the same parameters across BTC and ETH.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -48,8 +73,9 @@ too much.
 Current direction:
 
 1. Keep `trend_risk_slow` as the benchmark candidate.
-2. Improve robustness across more assets and time windows.
-3. Use RL later as a sizing/risk overlay only after the baseline remains stable.
+2. Run wider parameter grids only after the fast grid shows a promising region.
+3. Improve robustness across more assets and time windows.
+4. Use RL later as a sizing/risk overlay only after the baseline remains stable.
 
 ## Overfit Controls
 
@@ -88,4 +114,10 @@ Run BTC + ETH robustness sweep:
 
 ```bash
 make multi-sweep
+```
+
+Run BTC + ETH trend-risk parameter grid:
+
+```bash
+make trend-grid-fast
 ```

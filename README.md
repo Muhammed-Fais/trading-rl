@@ -36,6 +36,7 @@ make check
 make mlflow
 make sweep
 make multi-sweep
+make trend-grid-fast
 ```
 
 ## Download Data
@@ -115,6 +116,15 @@ uv run trading-rl-multi-symbol-sweep --config configs/sweeps/btc_eth_1h.yaml
 This is a robustness check, not a guarantee. A candidate is more interesting
 when it keeps positive mean walk-forward return across symbols using the same
 parameters.
+
+Run a BTC + ETH trend-risk parameter grid:
+
+```bash
+make trend-grid-fast
+```
+
+The fast grid is the normal iteration loop. Use `make trend-grid` for the wider
+search once the fast grid points to a promising neighborhood.
 
 See `docs/results.md` for the current BTC/ETH sweep results and research
 conclusions.

@@ -2,9 +2,11 @@ PYTHONPATH := src
 MLFLOW_DB := sqlite:///$(CURDIR)/mlflow.db
 MLFLOW_PORT ?= 5001
 SWEEP_CONFIG ?= configs/sweeps/btc_eth_1h.yaml
+TREND_GRID_FAST_CONFIG ?= configs/sweeps/trend_risk_grid_fast_btc_eth.yaml
+TREND_GRID_CONFIG ?= configs/sweeps/trend_risk_grid_btc_eth.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth sweep multi-sweep train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth sweep multi-sweep trend-grid-fast trend-grid train
 
 install:
 	uv sync --extra dev
@@ -50,6 +52,16 @@ multi-sweep:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.multi_symbol_sweep \
 		--config $(SWEEP_CONFIG) \
 		--output-dir artifacts/strategy_sweeps/btc_eth
+
+trend-grid-fast:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.trend_risk_grid \
+		--config $(TREND_GRID_FAST_CONFIG) \
+		--output-dir artifacts/strategy_sweeps/trend_risk_grid_fast_btc_eth
+
+trend-grid:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.trend_risk_grid \
+		--config $(TREND_GRID_CONFIG) \
+		--output-dir artifacts/strategy_sweeps/trend_risk_grid_btc_eth
 
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \
