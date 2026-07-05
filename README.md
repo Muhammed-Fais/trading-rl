@@ -52,6 +52,7 @@ make activity-portfolio-report
 make activity-portfolio-gates
 make regime-portfolio-report
 make regime-portfolio-gates
+make train-overlay-smoke
 ```
 
 ## Download Data
@@ -173,6 +174,7 @@ make activity-portfolio-report
 make activity-portfolio-gates
 make regime-portfolio-report
 make regime-portfolio-gates
+make train-overlay-smoke
 ```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research

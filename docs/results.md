@@ -523,9 +523,31 @@ inside hard risk limits and judged against the same portfolio gates.
 
 ## PPO Status
 
-PPO experiments are useful infrastructure, but current PPO policies are not
-profitable candidates. They underperform the trend-risk baseline and still trade
-too much.
+PPO experiments are useful infrastructure, but current PPO policies are not yet
+profitable candidates. The project now has a `RiskOverlayTradingEnv` where PPO
+chooses an allocation multiplier inside a hard trend-risk cap. This is safer
+than asking RL to learn raw buy/sell behavior from scratch: if the base risk
+policy says exposure must be zero, the RL overlay cannot override it.
+
+The first one-iteration smoke run used:
+
+`configs/train/ppo_overlay_btc_smoke.yaml`
+
+It completed end-to-end with RLlib, MLflow logging, checkpointing, and an HTML
+report:
+
+`artifacts/reports/btcusdt_ppo_overlay_smoke.html`
+
+Smoke evaluation result:
+
+| Policy | Return | Benchmark Return | Max Drawdown | Average Exposure |
+| --- | ---: | ---: | ---: | ---: |
+| PPO overlay smoke | -4.61% | -8.83% | 4.83% | 4.61% |
+
+Interpretation: this is not a trading candidate. It proves the RL overlay
+plumbing works. Next RL work should train longer, evaluate across the same
+purified holdout workflow, and compare against the core trend-risk baseline and
+portfolio gates.
 
 Current direction:
 
@@ -533,7 +555,7 @@ Current direction:
 2. Promote `trend_risk_crypto5_best` as the current research candidate.
 3. Run wider parameter grids only after the fast grid shows a promising region.
 4. Improve robustness across more assets and time windows.
-5. Use RL later as a sizing/risk overlay only after the baseline remains stable.
+5. Train RL only as a sizing/risk overlay inside hard risk limits.
 
 ## Overfit Controls
 

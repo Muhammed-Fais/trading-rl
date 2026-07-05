@@ -23,8 +23,9 @@ ACTIVITY_PORTFOLIO_GATES_CONFIG ?= configs/reports/activity_crypto3_portfolio_ga
 REGIME_PORTFOLIO_REPORT_CONFIG ?= configs/reports/regime_crypto3_portfolio.yaml
 REGIME_PORTFOLIO_GATES_CONFIG ?= configs/reports/regime_crypto3_portfolio_gates.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
+TRAIN_OVERLAY_SMOKE_CONFIG ?= configs/train/ppo_overlay_btc_smoke.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 tune-test-activity-crypto3 tune-test-regime-crypto3 failure-diagnostics portfolio-report portfolio-gates activity-portfolio-report activity-portfolio-gates regime-portfolio-report regime-portfolio-gates train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 tune-test-activity-crypto3 tune-test-regime-crypto3 failure-diagnostics portfolio-report portfolio-gates activity-portfolio-report activity-portfolio-gates regime-portfolio-report regime-portfolio-gates train train-overlay-smoke
 
 install:
 	uv sync --extra dev
@@ -195,3 +196,7 @@ regime-portfolio-gates:
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \
 		--config $(TRAIN_CONFIG)
+
+train-overlay-smoke:
+	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \
+		--config $(TRAIN_OVERLAY_SMOKE_CONFIG)

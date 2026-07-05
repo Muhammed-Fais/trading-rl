@@ -8,15 +8,23 @@ from typing import Any
 import pandas as pd
 
 from trading_rl.agents.evaluate import evaluate_and_report, named_policy, rllib_policy
+from trading_rl.envs.risk_overlay_env import RiskOverlayTradingEnv
 from trading_rl.envs.spot_trading_env import SpotTradingConfig, SpotTradingEnv
 from trading_rl.utils.config import load_yaml
 
 
 def build_env(env_config: dict) -> SpotTradingEnv:
+    env_type = str(env_config.pop("env_type", "spot"))
+    base_policy_config = env_config.pop("base_policy_config", None)
     data_path = env_config.pop("data_path")
     df = pd.read_parquet(data_path)
     config = SpotTradingConfig(**env_config)
-    return SpotTradingEnv(df, config)
+    env = SpotTradingEnv(df, config)
+    if env_type == "spot":
+        return env
+    if env_type == "risk_overlay":
+        return RiskOverlayTradingEnv(env, base_policy_config=base_policy_config)
+    raise ValueError("env_type must be one of: spot, risk_overlay")
 
 
 def main() -> None:
