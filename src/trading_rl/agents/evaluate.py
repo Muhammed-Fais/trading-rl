@@ -78,6 +78,17 @@ def named_policy(name: str, seed: int = 7) -> PolicyFn:
             cooldown_steps=72,
             max_exposure=0.75,
         )
+    if name == "trend_risk_atr":
+        return _trend_risk_policy(
+            short_window=24,
+            long_window=336,
+            realized_window=120,
+            trailing_stop_mode="atr",
+            atr_window=72,
+            atr_multiplier=3.0,
+            min_trailing_stop=0.06,
+            max_trailing_stop=0.20,
+        )
     raise ValueError(f"Unknown policy: {name}")
 
 
@@ -88,6 +99,11 @@ def trend_risk_policy(
     target_hourly_vol: float = 0.008,
     max_portfolio_drawdown: float = 0.12,
     trailing_stop: float = 0.15,
+    trailing_stop_mode: str = "percent",
+    atr_window: int = 72,
+    atr_multiplier: float = 3.0,
+    min_trailing_stop: float = 0.06,
+    max_trailing_stop: float = 0.20,
     cooldown_steps: int = 48,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
@@ -98,6 +114,11 @@ def trend_risk_policy(
         target_hourly_vol=target_hourly_vol,
         max_portfolio_drawdown=max_portfolio_drawdown,
         trailing_stop=trailing_stop,
+        trailing_stop_mode=trailing_stop_mode,
+        atr_window=atr_window,
+        atr_multiplier=atr_multiplier,
+        min_trailing_stop=min_trailing_stop,
+        max_trailing_stop=max_trailing_stop,
         cooldown_steps=cooldown_steps,
         max_exposure=max_exposure,
     )
@@ -296,18 +317,31 @@ def _trend_risk_policy(
     target_hourly_vol: float = 0.008,
     max_portfolio_drawdown: float = 0.12,
     trailing_stop: float = 0.15,
+    trailing_stop_mode: str = "percent",
+    atr_window: int = 72,
+    atr_multiplier: float = 3.0,
+    min_trailing_stop: float = 0.06,
+    max_trailing_stop: float = 0.20,
     cooldown_steps: int = 48,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     prices: list[float] = []
+    true_ranges: list[float] = []
     portfolio_peak = 0.0
     entry_peak = 0.0
     cooldown = 0
     invested = False
+    if trailing_stop_mode not in {"percent", "atr"}:
+        raise ValueError("trailing_stop_mode must be one of: percent, atr")
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
         nonlocal portfolio_peak, entry_peak, cooldown, invested
         price = float(info["price"])
+        previous_price = prices[-1] if prices else price
+        high = float(info.get("high", price))
+        low = float(info.get("low", price))
+        true_range = max(high - low, abs(high - previous_price), abs(low - previous_price))
+        true_ranges.append(0.0 if price <= 0.0 else true_range / price)
         prices.append(price)
         portfolio_value = float(info["portfolio_value"])
         portfolio_peak = max(portfolio_peak, portfolio_value)
@@ -340,7 +374,16 @@ def _trend_risk_policy(
             entry_peak = price
         entry_peak = max(entry_peak, price)
         price_drawdown = 0.0 if entry_peak <= 0.0 else 1.0 - price / entry_peak
-        if price_drawdown > trailing_stop:
+        active_trailing_stop = _active_trailing_stop(
+            mode=trailing_stop_mode,
+            trailing_stop=trailing_stop,
+            true_ranges=true_ranges,
+            atr_window=atr_window,
+            atr_multiplier=atr_multiplier,
+            min_trailing_stop=min_trailing_stop,
+            max_trailing_stop=max_trailing_stop,
+        )
+        if price_drawdown > active_trailing_stop:
             cooldown = cooldown_steps
             invested = False
             return _target_action(info, 0.0)
@@ -354,6 +397,24 @@ def _trend_risk_policy(
         return _target_action(info, exposure)
 
     return _policy
+
+
+def _active_trailing_stop(
+    *,
+    mode: str,
+    trailing_stop: float,
+    true_ranges: list[float],
+    atr_window: int,
+    atr_multiplier: float,
+    min_trailing_stop: float,
+    max_trailing_stop: float,
+) -> float:
+    if mode == "percent":
+        return trailing_stop
+    window = true_ranges[-atr_window:]
+    atr = 0.0 if not window else float(np.mean(window))
+    adaptive_stop = atr_multiplier * atr
+    return float(np.clip(adaptive_stop, min_trailing_stop, max_trailing_stop))
 
 
 def _action_value(action: PolicyAction) -> float:

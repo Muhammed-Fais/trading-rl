@@ -5,11 +5,13 @@ SWEEP_CONFIG ?= configs/sweeps/btc_eth_1h.yaml
 CRYPTO5_SWEEP_CONFIG ?= configs/sweeps/crypto5_1h.yaml
 TREND_GRID_FAST_CONFIG ?= configs/sweeps/trend_risk_grid_fast_btc_eth.yaml
 TREND_GRID_FAST_CRYPTO5_CONFIG ?= configs/sweeps/trend_risk_grid_fast_crypto5.yaml
+TREND_GRID_ADAPTIVE_CRYPTO5_CONFIG ?= configs/sweeps/trend_risk_grid_adaptive_crypto5.yaml
 TREND_GRID_CONFIG ?= configs/sweeps/trend_risk_grid_btc_eth.yaml
 PROMOTION_GATES_CONFIG ?= configs/sweeps/promotion_gates.yaml
+CALENDAR_HOLDOUT_CONFIG ?= configs/sweeps/calendar_holdout_crypto5.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid promotion-gates train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout train
 
 install:
 	uv sync --extra dev
@@ -100,6 +102,11 @@ trend-grid-fast-crypto5:
 		--config $(TREND_GRID_FAST_CRYPTO5_CONFIG) \
 		--output-dir artifacts/strategy_sweeps/trend_risk_grid_fast_crypto5
 
+trend-grid-adaptive-crypto5:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.trend_risk_grid \
+		--config $(TREND_GRID_ADAPTIVE_CRYPTO5_CONFIG) \
+		--output-dir artifacts/strategy_sweeps/trend_risk_grid_adaptive_crypto5
+
 trend-grid:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.trend_risk_grid \
 		--config $(TREND_GRID_CONFIG) \
@@ -108,6 +115,11 @@ trend-grid:
 promotion-gates:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.promotion_gates \
 		--config $(PROMOTION_GATES_CONFIG)
+
+calendar-holdout:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.calendar_holdout \
+		--config $(CALENDAR_HOLDOUT_CONFIG) \
+		--output-dir artifacts/holdout/calendar_crypto5
 
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \

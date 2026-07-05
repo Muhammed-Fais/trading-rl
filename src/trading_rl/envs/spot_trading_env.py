@@ -232,9 +232,13 @@ class SpotTradingEnv(gym.Env):
     ) -> dict[str, Any]:
         drawdown = 0.0 if self.peak_value <= 0 else 1.0 - self.portfolio_value / self.peak_value
         price = float(self.prices[self.current_step])
+        high = float(self.df.loc[self.current_step, "high"]) if "high" in self.df.columns else price
+        low = float(self.df.loc[self.current_step, "low"]) if "low" in self.df.columns else price
         return {
             "step": self.current_step,
             "price": price,
+            "high": high,
+            "low": low,
             "cash": self.cash,
             "asset_quantity": self.asset_quantity,
             "portfolio_value": self.portfolio_value,

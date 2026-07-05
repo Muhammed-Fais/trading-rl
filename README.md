@@ -38,6 +38,7 @@ make sweep
 make multi-sweep
 make trend-grid-fast
 make promotion-gates
+make calendar-holdout
 ```
 
 ## Download Data
@@ -144,10 +145,13 @@ process without changing strategy parameters per symbol:
 make download-crypto5
 make crypto5-sweep
 make trend-grid-fast-crypto5
+make trend-grid-adaptive-crypto5
+make calendar-holdout
 ```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research
-conclusions.
+conclusions. See `docs/research_notes.md` for research principles and source
+references behind the validation workflow.
 
 You can also generate a baseline report without training:
 

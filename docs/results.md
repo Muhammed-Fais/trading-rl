@@ -109,6 +109,42 @@ This is the current best candidate for the next research stage. It passes the
 five-symbol promotion gates, but it is not live-ready because one of five symbols
 still has negative mean walk-forward return.
 
+## Adaptive Trailing Stop Test
+
+The trend-risk policy now supports two trailing-stop modes:
+
+- `percent`: fixed percent drawdown from the highest price since entry
+- `atr`: volatility-adaptive stop based on recent true range
+
+From `artifacts/strategy_sweeps/trend_risk_grid_adaptive_crypto5/trend_risk_grid_ranking.csv`,
+the focused adaptive grid did not improve the current best result. The top rows
+were still fixed `percent` trailing stops:
+
+| Policy | Stop Mode | Mean Return | Min Fold Return | Mean Drawdown | Max Fold Drawdown | Positive Symbols |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| trend_risk_grid_012 | percent | 3.29% | -12.76% | 12.27% | 13.59% | 4 / 5 |
+| trend_risk_grid_004 | percent | 3.06% | -12.97% | 12.39% | 17.59% | 4 / 5 |
+| trend_risk_grid_002 | atr | 2.38% | -13.09% | 12.07% | 13.85% | 4 / 5 |
+
+Interpretation: ATR-style trailing exits are now available, but they are not the
+default candidate because the fixed `15%` trailing stop remains stronger in this
+test.
+
+## Calendar Holdout Diagnostic
+
+From `artifacts/holdout/calendar_crypto5/calendar_holdout_ranking.csv`, using
+calendar year `2024`:
+
+| Policy | Mean Return | Min Symbol Return | Mean Drawdown | Max Symbol Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| buy_and_hold | 125.37% | 48.95% | 42.78% | 46.66% | 5 / 5 |
+| trend_risk_crypto5_best | 23.77% | -5.86% | 12.31% | 12.51% | 3 / 5 |
+| cash | 0.00% | 0.00% | 0.00% | 0.00% | 0 / 5 |
+
+This is only a diagnostic because previous grids already used data through
+`2024-12-31`. The machinery is now in place, but a true final holdout must use
+data that was not used during parameter selection.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not
@@ -118,9 +154,10 @@ too much.
 Current direction:
 
 1. Keep `trend_risk_slow` as the benchmark candidate.
-2. Run wider parameter grids only after the fast grid shows a promising region.
-3. Improve robustness across more assets and time windows.
-4. Use RL later as a sizing/risk overlay only after the baseline remains stable.
+2. Promote `trend_risk_crypto5_best` as the current research candidate.
+3. Run wider parameter grids only after the fast grid shows a promising region.
+4. Improve robustness across more assets and time windows.
+5. Use RL later as a sizing/risk overlay only after the baseline remains stable.
 
 ## Overfit Controls
 
@@ -204,4 +241,16 @@ Run five-symbol robustness checks after downloading the extra local data:
 make download-crypto5
 make crypto5-sweep
 make trend-grid-fast-crypto5
+```
+
+Run adaptive trailing-stop grid:
+
+```bash
+make trend-grid-adaptive-crypto5
+```
+
+Run calendar holdout diagnostic:
+
+```bash
+make calendar-holdout
 ```
