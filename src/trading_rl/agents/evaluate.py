@@ -117,6 +117,10 @@ def trend_risk_policy(
     recovery_drawdown_buffer: float = 0.03,
     recovery_confirm_window: int = 168,
     recovery_confirm_threshold: float = 0.03,
+    regime_window: int = 336,
+    regime_momentum_window: int = 168,
+    regime_momentum_threshold: float = 0.08,
+    regime_max_volatility: float = 0.04,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     return _trend_risk_policy(
@@ -144,6 +148,10 @@ def trend_risk_policy(
         recovery_drawdown_buffer=recovery_drawdown_buffer,
         recovery_confirm_window=recovery_confirm_window,
         recovery_confirm_threshold=recovery_confirm_threshold,
+        regime_window=regime_window,
+        regime_momentum_window=regime_momentum_window,
+        regime_momentum_threshold=regime_momentum_threshold,
+        regime_max_volatility=regime_max_volatility,
         max_exposure=max_exposure,
     )
 
@@ -359,6 +367,10 @@ def _trend_risk_policy(
     recovery_drawdown_buffer: float = 0.03,
     recovery_confirm_window: int = 168,
     recovery_confirm_threshold: float = 0.03,
+    regime_window: int = 336,
+    regime_momentum_window: int = 168,
+    regime_momentum_threshold: float = 0.08,
+    regime_max_volatility: float = 0.04,
     max_exposure: float = 1.0,
 ) -> PolicyFn:
     prices: list[float] = []
@@ -374,9 +386,15 @@ def _trend_risk_policy(
         raise ValueError("trailing_stop_mode must be one of: percent, atr")
     if participation_mode not in {"momentum", "always"}:
         raise ValueError("participation_mode must be one of: momentum, always")
-    if recovery_reentry_mode not in {"off", "momentum", "confirmed_reset"}:
+    if recovery_reentry_mode not in {
+        "off",
+        "momentum",
+        "confirmed_reset",
+        "regime_reset",
+    }:
         raise ValueError(
-            "recovery_reentry_mode must be one of: off, momentum, confirmed_reset"
+            "recovery_reentry_mode must be one of: off, momentum, "
+            "confirmed_reset, regime_reset"
         )
 
     def _policy(_obs: np.ndarray, info: dict[str, Any]) -> PolicyAction:
@@ -420,6 +438,22 @@ def _trend_risk_policy(
             mode=recovery_reentry_mode,
             confirm_window=recovery_confirm_window,
             confirm_threshold=recovery_confirm_threshold,
+        ):
+            portfolio_peak = portfolio_value
+            entry_peak = price
+            risk_off = False
+            recovery_mode = False
+            cooldown_reason = ""
+        if risk_off and _regime_recovery_reset_allowed(
+            prices=prices,
+            short_ma=short_ma,
+            long_ma=long_ma,
+            true_ranges=true_ranges,
+            mode=recovery_reentry_mode,
+            regime_window=regime_window,
+            momentum_window=regime_momentum_window,
+            momentum_threshold=regime_momentum_threshold,
+            max_volatility=regime_max_volatility,
         ):
             portfolio_peak = portfolio_value
             entry_peak = price
@@ -580,6 +614,36 @@ def _confirmed_recovery_reset_allowed(
     near_recovery_high = price >= recent_high * (1.0 - confirm_threshold)
     trend_confirmed = price > short_ma > long_ma
     return bool(near_recovery_high and trend_confirmed)
+
+
+def _regime_recovery_reset_allowed(
+    *,
+    prices: list[float],
+    short_ma: float,
+    long_ma: float,
+    true_ranges: list[float],
+    mode: str,
+    regime_window: int,
+    momentum_window: int,
+    momentum_threshold: float,
+    max_volatility: float,
+) -> bool:
+    if mode != "regime_reset":
+        return False
+    lookback = max(regime_window, momentum_window)
+    if lookback <= 0 or len(prices) <= lookback:
+        return False
+    price = prices[-1]
+    base_price = prices[-momentum_window - 1]
+    if base_price <= 0.0:
+        return False
+    momentum = price / base_price - 1.0
+    regime_ma = float(np.mean(prices[-regime_window:]))
+    recent_ranges = true_ranges[-regime_window:]
+    volatility = 0.0 if not recent_ranges else float(np.mean(recent_ranges))
+    volatility_ok = max_volatility <= 0.0 or volatility <= max_volatility
+    trend_confirmed = price > short_ma > long_ma and price > regime_ma
+    return bool(momentum >= momentum_threshold and trend_confirmed and volatility_ok)
 
 
 def _active_trailing_stop(

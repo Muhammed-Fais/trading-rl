@@ -487,6 +487,40 @@ much in drawdown and symbol breadth. This is not a promotion candidate. The next
 useful direction is a regime classifier or allocation overlay that decides when
 re-entry risk is worth taking, rather than resetting solely from price recovery.
 
+## Regime Reset Overlay Test
+
+The trend-risk policy now supports `recovery_reentry_mode=regime_reset`. This
+mode allows normal risk to resume after a portfolio drawdown stop only when a
+simple regime filter agrees:
+
+- price is above short, long, and regime moving averages
+- medium-term momentum is positive enough
+- recent true-range volatility is below the configured cap
+
+This is still rule-based, but it is shaped like the kind of signal an RL sizing
+overlay could later learn to use.
+
+The focused crypto3 regime experiment tested `off` vs `regime_reset` on the same
+purified split. The selector still chose `recovery_reentry_mode=off`.
+
+Selection-period comparison:
+
+| Variant | Mean Return | Min Fold Return | Mean Active Steps | Mean Drawdown | Max Fold Drawdown | Positive Symbols |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| selected off | 2.82% | -11.91% | 39.15% | 12.21% | 13.46% | 3 / 3 |
+| best regime_reset | 0.87% | -23.94% | 51.28% | 16.65% | 30.48% | 2 / 3 |
+| most active regime_reset | -2.80% | -28.77% | 65.00% | 19.77% | 37.42% | 0 / 3 |
+
+The generated regime report is:
+
+`artifacts/tune_test/regime_crypto3_2021_2024/portfolio_report/portfolio_report.html`
+
+Interpretation: regime reset is directionally better than blind confirmed reset,
+but it still does not clear the robustness problem. The current re-entry family
+keeps converting activity into drawdown and symbol failures. This points toward
+a learned allocation/risk overlay as the next experiment, trained to size only
+inside hard risk limits and judged against the same portfolio gates.
+
 ## PPO Status
 
 PPO experiments are useful infrastructure, but current PPO policies are not

@@ -44,11 +44,14 @@ make tune-test-participation
 make tune-test-core-exposure
 make tune-test-core-exposure-crypto3
 make tune-test-activity-crypto3
+make tune-test-regime-crypto3
 make failure-diagnostics
 make portfolio-report
 make portfolio-gates
 make activity-portfolio-report
 make activity-portfolio-gates
+make regime-portfolio-report
+make regime-portfolio-gates
 ```
 
 ## Download Data
@@ -162,11 +165,14 @@ make tune-test-participation
 make tune-test-core-exposure
 make tune-test-core-exposure-crypto3
 make tune-test-activity-crypto3
+make tune-test-regime-crypto3
 make failure-diagnostics
 make portfolio-report
 make portfolio-gates
 make activity-portfolio-report
 make activity-portfolio-gates
+make regime-portfolio-report
+make regime-portfolio-gates
 ```
 
 See `docs/results.md` for the current BTC/ETH sweep results and research

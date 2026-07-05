@@ -5,6 +5,7 @@ from trading_rl.agents.evaluate import (
     _confirmed_recovery_reset_allowed,
     _momentum_participation_exposure,
     _recovery_reentry_exposure,
+    _regime_recovery_reset_allowed,
     trend_risk_policy,
 )
 
@@ -166,6 +167,38 @@ def test_confirmed_recovery_reset_rejects_weak_recovery() -> None:
     assert not allowed
 
 
+def test_regime_recovery_reset_requires_trend_momentum_and_volatility() -> None:
+    allowed = _regime_recovery_reset_allowed(
+        prices=[100.0, 103.0, 106.0, 110.0, 113.0],
+        short_ma=111.0,
+        long_ma=106.0,
+        true_ranges=[0.01, 0.012, 0.011, 0.013, 0.012],
+        mode="regime_reset",
+        regime_window=3,
+        momentum_window=3,
+        momentum_threshold=0.08,
+        max_volatility=0.02,
+    )
+
+    assert allowed
+
+
+def test_regime_recovery_reset_rejects_high_volatility_reentry() -> None:
+    allowed = _regime_recovery_reset_allowed(
+        prices=[100.0, 103.0, 106.0, 110.0, 113.0],
+        short_ma=111.0,
+        long_ma=106.0,
+        true_ranges=[0.01, 0.012, 0.08, 0.09, 0.10],
+        mode="regime_reset",
+        regime_window=3,
+        momentum_window=3,
+        momentum_threshold=0.08,
+        max_volatility=0.02,
+    )
+
+    assert not allowed
+
+
 def test_recovery_reentry_allows_capped_reentry_after_drawdown_stop() -> None:
     policy = trend_risk_policy(
         short_window=2,
@@ -227,6 +260,42 @@ def test_confirmed_recovery_reset_allows_normal_reentry_after_drawdown_stop() ->
                     "price": price,
                     "high": price,
                     "low": price,
+                    "portfolio_value": value,
+                    "action_mode": "continuous",
+                },
+            )
+        )
+
+    assert float(actions[-1][0]) > 0.15
+
+
+def test_regime_recovery_reset_allows_normal_reentry_after_drawdown_stop() -> None:
+    policy = trend_risk_policy(
+        short_window=2,
+        long_window=3,
+        realized_window=3,
+        target_hourly_vol=1.0,
+        max_portfolio_drawdown=0.10,
+        participation_floor=0.0,
+        cooldown_steps=1,
+        recovery_reentry_mode="regime_reset",
+        regime_window=3,
+        regime_momentum_window=3,
+        regime_momentum_threshold=0.03,
+        regime_max_volatility=0.10,
+    )
+    prices = [100.0, 101.0, 102.0, 103.0, 108.0, 112.0]
+    values = [10000.0, 11500.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    actions = []
+
+    for price, value in zip(prices, values, strict=True):
+        actions.append(
+            policy(
+                _obs=None,
+                info={
+                    "price": price,
+                    "high": price * 1.001,
+                    "low": price * 0.999,
                     "portfolio_value": value,
                     "action_mode": "continuous",
                 },

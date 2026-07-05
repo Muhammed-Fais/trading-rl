@@ -14,14 +14,17 @@ TUNE_TEST_PARTICIPATION_CONFIG ?= configs/sweeps/tune_test_participation_crypto5
 TUNE_TEST_CORE_EXPOSURE_CONFIG ?= configs/sweeps/tune_test_core_exposure_crypto5_2021_2024.yaml
 TUNE_TEST_CORE_EXPOSURE_CRYPTO3_CONFIG ?= configs/sweeps/tune_test_core_exposure_crypto3_2021_2024.yaml
 TUNE_TEST_ACTIVITY_CRYPTO3_CONFIG ?= configs/sweeps/tune_test_activity_crypto3_2021_2024.yaml
+TUNE_TEST_REGIME_CRYPTO3_CONFIG ?= configs/sweeps/tune_test_regime_crypto3_2021_2024.yaml
 FAILURE_DIAGNOSTICS_CONFIG ?= configs/sweeps/failure_diagnostics_crypto5.yaml
 PORTFOLIO_REPORT_CONFIG ?= configs/reports/core_exposure_crypto3_portfolio.yaml
 PORTFOLIO_GATES_CONFIG ?= configs/reports/core_exposure_crypto3_portfolio_gates.yaml
 ACTIVITY_PORTFOLIO_REPORT_CONFIG ?= configs/reports/activity_crypto3_portfolio.yaml
 ACTIVITY_PORTFOLIO_GATES_CONFIG ?= configs/reports/activity_crypto3_portfolio_gates.yaml
+REGIME_PORTFOLIO_REPORT_CONFIG ?= configs/reports/regime_crypto3_portfolio.yaml
+REGIME_PORTFOLIO_GATES_CONFIG ?= configs/reports/regime_crypto3_portfolio_gates.yaml
 TRAIN_CONFIG ?= configs/train/ppo.yaml
 
-.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 tune-test-activity-crypto3 failure-diagnostics portfolio-report portfolio-gates activity-portfolio-report activity-portfolio-gates train
+.PHONY: install install-rllib test lint check mlflow download-btc download-eth download-bnb download-sol download-xrp download-crypto5 sweep multi-sweep crypto5-sweep trend-grid-fast trend-grid-fast-crypto5 trend-grid-adaptive-crypto5 trend-grid promotion-gates calendar-holdout tune-test tune-test-participation tune-test-core-exposure tune-test-core-exposure-crypto3 tune-test-activity-crypto3 tune-test-regime-crypto3 failure-diagnostics portfolio-report portfolio-gates activity-portfolio-report activity-portfolio-gates regime-portfolio-report regime-portfolio-gates train
 
 install:
 	uv sync --extra dev
@@ -156,6 +159,11 @@ tune-test-activity-crypto3:
 		--config $(TUNE_TEST_ACTIVITY_CRYPTO3_CONFIG) \
 		--output-dir artifacts/tune_test/activity_crypto3_2021_2024
 
+tune-test-regime-crypto3:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.tune_test \
+		--config $(TUNE_TEST_REGIME_CRYPTO3_CONFIG) \
+		--output-dir artifacts/tune_test/regime_crypto3_2021_2024
+
 failure-diagnostics:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.failure_diagnostics \
 		--config $(FAILURE_DIAGNOSTICS_CONFIG)
@@ -175,6 +183,14 @@ activity-portfolio-report:
 activity-portfolio-gates:
 	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.portfolio_gates \
 		--config $(ACTIVITY_PORTFOLIO_GATES_CONFIG)
+
+regime-portfolio-report:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.portfolio_report \
+		--config $(REGIME_PORTFOLIO_REPORT_CONFIG)
+
+regime-portfolio-gates:
+	PYTHONPATH=$(PYTHONPATH) uv run python -m trading_rl.backtest.portfolio_gates \
+		--config $(REGIME_PORTFOLIO_GATES_CONFIG)
 
 train:
 	PYTHONPATH=$(PYTHONPATH) uv run --extra rllib --extra dev python -m trading_rl.agents.rllib_train \

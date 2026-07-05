@@ -1,0 +1,73 @@
+symbols:
+  BTCUSDT:
+    data_path: data/features/binance/BTCUSDT_1h_features.parquet
+  ETHUSDT:
+    data_path: data/features/binance/ETHUSDT_1h_features.parquet
+  BNBUSDT:
+    data_path: data/features/binance/BNBUSDT_1h_features.parquet
+
+base_env_config:
+  initial_cash: 10000.0
+  lookback: 64
+  episode_length: null
+  split: all
+  random_start: false
+  train_fraction: 0.7
+  validation_fraction: 0.15
+  fee_rate: 0.001
+  slippage_rate: 0.0005
+  min_trade_notional: 10.0
+  action_mode: continuous
+  no_trade_band: 0.05
+  normalize_observations: true
+  observation_clip: 10.0
+
+selection_period:
+  start: "2021-01-01"
+  end: "2023-12-31"
+
+holdout:
+  start: "2024-01-01"
+  end: "2024-12-31"
+
+walk_forward:
+  train_size: 8760
+  test_size: 2160
+  step_size: 2160
+
+active_exposure_threshold: 0.05
+
+selection_objective:
+  base_score: robust_score
+  activity_weight: 0.05
+  min_positive_symbols: 3
+  max_mean_drawdown: 0.18
+  max_max_fold_drawdown: 0.20
+
+grid:
+  short_window: [24]
+  long_window: [336]
+  realized_window: [120]
+  target_hourly_vol: [0.008]
+  max_portfolio_drawdown: [0.12, 0.15]
+  trailing_stop: [0.15]
+  participation_floor: [0.20]
+  participation_mode: [always]
+  momentum_window: [72]
+  momentum_threshold: [0.05]
+  cooldown_steps: [48]
+  reset_peak_after_drawdown: [false]
+  recovery_reentry_mode: ["off", regime_reset]
+  recovery_exposure: [0.10]
+  recovery_momentum_window: [72]
+  recovery_momentum_threshold: [0.05]
+  recovery_drawdown_buffer: [0.03]
+  recovery_confirm_window: [168]
+  recovery_confirm_threshold: [0.03]
+  regime_window: [336]
+  regime_momentum_window: [168]
+  regime_momentum_threshold: [0.05, 0.10]
+  regime_max_volatility: [0.03, 0.05]
+  max_exposure: [1.0]
+
+progress_every: 25
